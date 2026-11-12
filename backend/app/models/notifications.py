@@ -3,8 +3,21 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, SmallInteger, String, Text, func, text
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    LargeBinary,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UUIDPrimaryKey, str_enum
@@ -25,8 +38,32 @@ class NotificationSettings(Base):
     notify_recovery: Mapped[bool] = mapped_column(default=True)
     notify_ssl: Mapped[bool] = mapped_column(default=True)
     ssl_warning_days: Mapped[int] = mapped_column(SmallInteger, default=14)
-    alert_email: Mapped[str | None] = mapped_column(String(254))  # defaults to account email
+    # Also deliver alerts to the (confirmed) account email, besides confirmed alert contacts.
+    send_to_account_email: Mapped[bool] = mapped_column(default=True)
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+
+MAX_ALERT_CONTACTS = 5
+
+
+class AlertContact(UUIDPrimaryKey, Base):
+    """Additional alert recipient. Receives alerts only after confirming via an emailed link."""
+
+    __tablename__ = "alert_contacts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "email", name="uq_alert_contacts_user_email"),
+        CheckConstraint("email = lower(email)", name="email_lowercase"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    email: Mapped[str] = mapped_column(String(254))
+    is_enabled: Mapped[bool] = mapped_column(default=True)
+    verified_at: Mapped[datetime | None]
+    confirm_token_hash: Mapped[bytes | None] = mapped_column(LargeBinary(32), unique=True)
+    confirm_expires_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class NotificationKind(enum.StrEnum):
@@ -35,6 +72,7 @@ class NotificationKind(enum.StrEnum):
     SSL_EXPIRING = "ssl_expiring"
     SSL_ERROR = "ssl_error"
     ACCOUNT = "account"
+    TEST = "test"
 
 
 class OutboxStatus(enum.StrEnum):
@@ -71,6 +109,7 @@ class NotificationOutbox(UUIDPrimaryKey, Base):
     subject: Mapped[str] = mapped_column(String(255))
     body_text: Mapped[str] = mapped_column(Text)
     body_html: Mapped[str | None] = mapped_column(Text)
+    headers: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # e.g. List-Unsubscribe
     dedupe_key: Mapped[str] = mapped_column(String(200), unique=True)
     status: Mapped[OutboxStatus] = mapped_column(
         str_enum(OutboxStatus, "outbox_status"), default=OutboxStatus.PENDING

@@ -46,7 +46,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors",
         "disabled:cursor-not-allowed disabled:opacity-55",
         variants[variant],
         sizes[size],
@@ -76,7 +76,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors",
         variants[variant],
         sizes[size],
         className,
@@ -176,27 +176,32 @@ export function Toggle({
   label,
   description,
   disabled,
+  ariaLabel,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
   description?: string;
   disabled?: boolean;
+  ariaLabel?: string;
 }) {
   const id = useId();
   return (
-    <div className="flex items-start justify-between gap-4 py-2">
-      <div>
-        <label htmlFor={id} className="text-sm font-medium text-fg">
-          {label}
-        </label>
-        {description && <p className="mt-0.5 text-xs text-fg-muted">{description}</p>}
-      </div>
+    <div className={cn("flex items-start justify-between gap-4", label ? "py-2" : "py-0")}>
+      {label && (
+        <div>
+          <label htmlFor={id} className="text-sm font-medium text-fg">
+            {label}
+          </label>
+          {description && <p className="mt-0.5 text-xs text-fg-muted">{description}</p>}
+        </div>
+      )}
       <button
         id={id}
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={ariaLabel}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(

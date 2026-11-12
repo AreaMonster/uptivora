@@ -13,7 +13,9 @@ from app.auth.router import router as auth_router
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.errors import install_error_handlers
+from app.incidents.router import router as incidents_router
 from app.monitors.router import router as monitors_router
+from app.notifications.router import router as notifications_router
 from app.public.router import router as public_router
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -87,6 +89,8 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(account_router)
     app.include_router(monitors_router)
+    app.include_router(incidents_router)
+    app.include_router(notifications_router)
     return app
 
 

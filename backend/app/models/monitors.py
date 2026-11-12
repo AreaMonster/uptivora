@@ -12,6 +12,7 @@ from sqlalchemy import (
     Index,
     SmallInteger,
     String,
+    Text,
     func,
     text,
 )
@@ -164,4 +165,10 @@ class Incident(UUIDPrimaryKey, Base):
     cause: Mapped[str] = mapped_column(String(500), default="")
     error_kind: Mapped[str | None] = mapped_column(String(32))
     status_code: Mapped[int | None] = mapped_column(SmallInteger)
+    # Team workflow: someone acknowledges the outage and can leave a note.
+    acknowledged_at: Mapped[datetime | None]
+    acknowledged_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

@@ -174,3 +174,71 @@ export type LicenceProduct = {
   currency: string;
   limits: { max_monitors: number; max_users: number; min_interval_seconds: number };
 };
+
+export type NotificationPrefs = {
+  notify_down: boolean;
+  notify_recovery: boolean;
+  notify_ssl: boolean;
+  ssl_warning_days: number;
+  send_to_account_email: boolean;
+};
+
+export type AlertContact = {
+  id: string;
+  email: string;
+  is_enabled: boolean;
+  status: "pending" | "confirmed";
+  verified_at: string | null;
+  created_at: string | null;
+};
+
+export type DeliveryLogEntry = {
+  id: string;
+  kind: "monitor_down" | "monitor_up" | "ssl_expiring" | "ssl_error" | "test";
+  recipient: string;
+  subject: string;
+  status: "pending" | "sending" | "sent" | "failed" | "cancelled";
+  attempts: number;
+  last_error: string | null;
+  created_at: string;
+  sent_at: string | null;
+  incident_id: string | null;
+  monitor_id: string | null;
+};
+
+export type IncidentItem = Incident & {
+  monitor_name: string;
+  acknowledged_at: string | null;
+  note: string | null;
+};
+
+export type IncidentPage = { items: IncidentItem[]; next_before: string | null };
+
+export type IncidentSummary = {
+  days: number;
+  total: number;
+  open: number;
+  downtime_seconds: number;
+  mean_time_to_recovery_seconds: number | null;
+};
+
+export type IncidentDetail = {
+  incident: IncidentItem & { acknowledged_by: string | null };
+  monitor: { id: string; name: string; url: string; status: MonitorStatus; interval_seconds: number };
+  checks: {
+    checked_at: string;
+    is_up: boolean;
+    status_code: number | null;
+    response_ms: number | null;
+    error_kind: string | null;
+    error: string | null;
+  }[];
+  notifications: {
+    kind: string;
+    recipient: string;
+    status: string;
+    created_at: string;
+    sent_at: string | null;
+    last_error: string | null;
+  }[];
+};

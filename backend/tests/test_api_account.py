@@ -56,10 +56,10 @@ async def test_notification_preferences(client) -> None:
         "notify_recovery": False,
         "notify_ssl": True,
         "ssl_warning_days": 30,
-        "alert_email": "Ops@Example.com",
+        "send_to_account_email": False,
     }
     saved = await client.put("/api/account/notifications", json=new)
-    assert saved.status_code == 200 and saved.json()["alert_email"] == "ops@example.com"
+    assert saved.status_code == 200 and saved.json()["send_to_account_email"] is False
     assert (await client.get("/api/account/notifications")).json()["notify_recovery"] is False
     bad = await client.put("/api/account/notifications", json={**new, "ssl_warning_days": 0})
     assert bad.status_code == 422

@@ -420,3 +420,58 @@ async def test_heartbeat_and_advisory_lock(isolate, db, maker, settings) -> None
     assert await hk.with_advisory_lock("rollup", lambda: asyncio.sleep(0, "second")) is None
     release.set()
     assert await first == "first"
+
+
+async def test_alerts_fan_out_to_confirmed_contacts(isolate, db, maker, settings) -> None:
+    from app.models import AlertContact
+
+    user = await make_user(db)
+    confirmed = f"team-{uuid.uuid4().hex[:6]}@example.com"
+    db.add_all(
+        [
+            AlertContact(user_id=user.id, email=confirmed, verified_at=datetime.now(UTC)),
+            AlertContact(user_id=user.id, email=f"pending-{uuid.uuid4().hex[:6]}@example.com"),
+            AlertContact(
+                user_id=user.id,
+                email=f"off-{uuid.uuid4().hex[:6]}@example.com",
+                verified_at=datetime.now(UTC),
+                is_enabled=False,
+            ),
+        ]
+    )
+    await db.commit()
+    m = await make_monitor(db, user, down_threshold=1)
+    checker = ScriptedChecker()
+    checker.push(m.url, DOWN)
+    await run_once(Scheduler(maker, settings, None, worker_id="w-fan", checker=checker))
+    mails = await outbox_for(db, m.id)
+    assert sorted(x.recipient for x in mails) == sorted([user.email, confirmed])
+    assert len({x.dedupe_key for x in mails}) == 2
+    contact_mail = next(x for x in mails if x.recipient == confirmed)
+    assert "List-Unsubscribe" in contact_mail.headers
+    assert user.email in contact_mail.body_text  # explains who added them
+
+
+async def test_flapping_monitor_stops_emailing(isolate, db, maker, settings) -> None:
+    from app.models import SystemEvent
+
+    user = await make_user(db)
+    m = await make_monitor(db, user, down_threshold=1)
+    now = datetime.now(UTC)
+    for i in range(5):  # five short outages in the last hour
+        db.add(
+            Incident(
+                monitor_id=m.id,
+                started_at=now - timedelta(minutes=50 - i * 8),
+                resolved_at=now - timedelta(minutes=48 - i * 8),
+                cause="blip",
+            )
+        )
+    await db.commit()
+    checker = ScriptedChecker()
+    checker.push(m.url, DOWN)
+    await run_once(Scheduler(maker, settings, None, worker_id="w-flap", checker=checker))
+    assert (await reload(db, Monitor, m.id)).status == MonitorStatus.DOWN
+    assert await outbox_for(db, m.id) == []  # sixth outage within the hour: no email
+    events = (await db.scalars(select(SystemEvent).where(SystemEvent.source == "alerts"))).all()
+    assert any(str(m.id) in e.message for e in events)

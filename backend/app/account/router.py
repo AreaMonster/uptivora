@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from zoneinfo import available_timezones
 
 from fastapi import APIRouter, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 
 from app.auth import service
@@ -18,9 +18,8 @@ from app.core.audit import audit
 from app.core.errors import AppError, Conflict, NotFound
 from app.core.requestctx import client_ip
 from app.core.security import hash_password, verify_password
-from app.models import Incident, Monitor, NotificationSettings, User, UserRole
 from app.models import Session as UserSession
-from app.monitors.router import incident_out
+from app.models import User, UserRole
 
 router = APIRouter(prefix="/api/account", tags=["account"])
 _TIMEZONES = frozenset(available_timezones())
@@ -45,14 +44,6 @@ class PasswordChangeIn(BaseModel):
 
 class DeleteAccountIn(BaseModel):
     password: str = Field(max_length=256)
-
-
-class NotificationPrefs(BaseModel):
-    notify_down: bool = True
-    notify_recovery: bool = True
-    notify_ssl: bool = True
-    ssl_warning_days: int = Field(default=14, ge=1, le=90)
-    alert_email: EmailStr | None = None
 
 
 async def _verify_current_password(user: User, password: str) -> None:
@@ -128,50 +119,6 @@ async def revoke_session(session_id: uuid.UUID, ctx: CurrentUser, db: DB) -> Res
     session.revoked_at = datetime.now(UTC)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.get("/notifications")
-async def get_notifications(ctx: CurrentUser, db: DB) -> NotificationPrefs:
-    prefs = await db.get(NotificationSettings, ctx.user.id)
-    if prefs is None:
-        return NotificationPrefs()
-    return NotificationPrefs(
-        notify_down=prefs.notify_down,
-        notify_recovery=prefs.notify_recovery,
-        notify_ssl=prefs.notify_ssl,
-        ssl_warning_days=prefs.ssl_warning_days,
-        alert_email=prefs.alert_email,
-    )
-
-
-@router.put("/notifications")
-async def put_notifications(body: NotificationPrefs, ctx: CurrentUser, db: DB) -> NotificationPrefs:
-    prefs = await db.get(NotificationSettings, ctx.user.id)
-    if prefs is None:
-        prefs = NotificationSettings(user_id=ctx.user.id)
-        db.add(prefs)
-    data = body.model_dump()
-    data["alert_email"] = (
-        service.normalize_email(data["alert_email"]) if data["alert_email"] else None
-    )
-    for key, value in data.items():
-        setattr(prefs, key, value)
-    await db.commit()
-    return body.model_copy(update={"alert_email": data["alert_email"]})
-
-
-@router.get("/incidents")
-async def list_incidents(ctx: CurrentUser, db: DB, limit: int = 100) -> list[dict]:
-    rows = (
-        await db.execute(
-            select(Incident, Monitor.name)
-            .join(Monitor, Monitor.id == Incident.monitor_id)
-            .where(Monitor.owner_id == ctx.user.id)
-            .order_by(Incident.started_at.desc())
-            .limit(min(max(limit, 1), 200))
-        )
-    ).all()
-    return [{**incident_out(i).model_dump(mode="json"), "monitor_name": name} for i, name in rows]
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

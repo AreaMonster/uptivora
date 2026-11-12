@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { Monitor as MonitorIcon, Smartphone } from "lucide-react";
 import {
   Alert,
@@ -12,24 +12,13 @@ import {
   SelectField,
   Skeleton,
   TextField,
-  Toggle,
 } from "@/components/ui";
 import { ApiError, api, type FieldErrors, type Me } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatInterval, timeAgo } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
-
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  return (
-    <section className="grid gap-6 border-b border-line py-8 first:pt-0 last:border-0 lg:grid-cols-[260px_1fr]">
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        {description && <p className="mt-1 text-sm text-fg-muted">{description}</p>}
-      </div>
-      <div className="card p-6">{children}</div>
-    </section>
-  );
-}
+import { NotificationSettings } from "@/components/app/notification-settings";
+import { SettingsSection } from "@/components/app/settings-section";
 
 export function SettingsPage() {
   const { me } = useAuth();
@@ -39,7 +28,7 @@ export function SettingsPage() {
       <PageHeader title="Settings" description="Your profile, alerts and account security." />
       <ProfileSection />
       <PlanSection />
-      <NotificationsSection />
+      <NotificationSettings />
       <PasswordSection />
       <SessionsSection />
       <DangerSection />
@@ -76,7 +65,7 @@ function ProfileSection() {
   }
 
   return (
-    <Section title="Profile" description="Times in the dashboard are shown in your time zone.">
+    <SettingsSection title="Profile" description="Times in the dashboard are shown in your time zone.">
       <form onSubmit={save} className="space-y-4">
         {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
         <TextField label="Email" value={me?.user.email ?? ""} disabled
@@ -87,7 +76,7 @@ function ProfileSection() {
         </SelectField>
         <div className="flex justify-end"><Button type="submit" loading={busy}>Save profile</Button></div>
       </form>
-    </Section>
+    </SettingsSection>
   );
 }
 
@@ -103,7 +92,7 @@ function PlanSection() {
     unlicensed: "Evaluation mode (no licence)",
   }[limits.source];
   return (
-    <Section title={limits.scope === "instance" ? "Licence" : "Plan"}
+    <SettingsSection title={limits.scope === "instance" ? "Licence" : "Plan"}
       description={limits.scope === "instance" ? "Limits apply to this whole installation." : "Your current plan and usage."}>
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-medium capitalize">{sourceLabel}</p>
@@ -132,63 +121,7 @@ function PlanSection() {
           Online upgrades, downgrades and billing history are coming to this page soon.
         </p>
       )}
-    </Section>
-  );
-}
-
-type Prefs = { notify_down: boolean; notify_recovery: boolean; notify_ssl: boolean; ssl_warning_days: number; alert_email: string | null };
-
-function NotificationsSection() {
-  const { me } = useAuth();
-  const { data, setData } = useApi<Prefs>("/api/account/notifications");
-  const [fields, setFields] = useState<FieldErrors>({});
-  const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    if (!data) return;
-    setBusy(true);
-    setMsg(null);
-    setFields({});
-    try {
-      setData(await api<Prefs>("/api/account/notifications", {
-        method: "PUT", body: { ...data, alert_email: data.alert_email?.trim() || null },
-      }));
-      setMsg({ tone: "success", text: "Notification settings saved." });
-    } catch (err) {
-      if (err instanceof ApiError) setFields(err.fields);
-      setMsg({ tone: "error", text: err instanceof ApiError ? err.message : "Saving failed." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Section title="Notifications" description="Choose which emails you receive. Account and security emails are always sent.">
-      {!data ? <Skeleton className="h-48" /> : (
-        <form onSubmit={save} className="space-y-4">
-          {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
-          <div className="divide-y divide-line">
-            <Toggle label="Outage alerts" description="When a monitor is confirmed down."
-              checked={data.notify_down} onChange={(v) => setData({ ...data, notify_down: v })} />
-            <Toggle label="Recovery alerts" description="When a monitor is back up, with the outage duration."
-              checked={data.notify_recovery} onChange={(v) => setData({ ...data, notify_recovery: v })} />
-            <Toggle label="SSL certificate warnings" description="Before a certificate expires."
-              checked={data.notify_ssl} onChange={(v) => setData({ ...data, notify_ssl: v })} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Warn days before expiry" type="number" min={1} max={90}
-              value={data.ssl_warning_days} error={fields.ssl_warning_days}
-              onChange={(e) => setData({ ...data, ssl_warning_days: Number(e.target.value) })} />
-            <TextField label="Alerts are sent to" type="email" disabled
-              value={me?.user.email ?? ""}
-              hint="Your confirmed account email. A separate, confirmed alert address is coming soon." />
-          </div>
-          <div className="flex justify-end"><Button type="submit" loading={busy}>Save notifications</Button></div>
-        </form>
-      )}
-    </Section>
+    </SettingsSection>
   );
 }
 
@@ -220,7 +153,7 @@ function PasswordSection() {
   }
 
   return (
-    <Section title="Password" description="Changing it signs you out everywhere else.">
+    <SettingsSection title="Password" description="Changing it signs you out everywhere else.">
       <form onSubmit={save} className="space-y-4">
         {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
         <TextField label="Current password" type="password" autoComplete="current-password"
@@ -232,7 +165,7 @@ function PasswordSection() {
           <Button type="submit" loading={busy} disabled={!current || !next}>Change password</Button>
         </div>
       </form>
-    </Section>
+    </SettingsSection>
   );
 }
 
@@ -260,7 +193,7 @@ function SessionsSection() {
   }
 
   return (
-    <Section title="Active sessions" description="Devices currently signed in to your account.">
+    <SettingsSection title="Active sessions" description="Devices currently signed in to your account.">
       {!data ? <Skeleton className="h-24" /> : (
         <ul className="divide-y divide-line">
           {data.map((s) => {
@@ -289,7 +222,7 @@ function SessionsSection() {
           })}
         </ul>
       )}
-    </Section>
+    </SettingsSection>
   );
 }
 
@@ -321,7 +254,7 @@ function DangerSection() {
   }
 
   return (
-    <Section title="Delete account" description="Permanently remove your account, monitors and history.">
+    <SettingsSection title="Delete account" description="Permanently remove your account, monitors and history.">
       <p className="text-sm text-fg-muted">
         This deletes all your monitors, check results and incidents immediately. It cannot be undone.
       </p>
@@ -334,6 +267,6 @@ function DangerSection() {
             onChange={(e) => setPassword(e.target.value)} error={error ?? undefined} />
         </div>
       </ConfirmDialog>
-    </Section>
+    </SettingsSection>
   );
 }

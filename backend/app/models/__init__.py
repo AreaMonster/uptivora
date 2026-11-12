@@ -23,6 +23,8 @@ from app.models.monitors import (
     PausedReason,
 )
 from app.models.notifications import (
+    MAX_ALERT_CONTACTS,
+    AlertContact,
     NotificationKind,
     NotificationOutbox,
     NotificationSettings,
@@ -39,6 +41,8 @@ from app.models.system import (
 from app.models.users import AuthToken, AuthTokenPurpose, Session, User, UserRole
 
 __all__ = [
+    "MAX_ALERT_CONTACTS",
+    "AlertContact",
     "AppSetting",
     "AuditLog",
     "AuthToken",

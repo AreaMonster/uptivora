@@ -72,14 +72,28 @@ test, scheduler lifecycle, lease/double-claim, 3 concurrent workers × 300 monit
 exactly once), rollups, retention, SSL dedupe, advisory locks.
 Not yet: checks from multiple locations (roadmap item), 10k-monitor load test (Phase 9).
 
-## Phase 4 — Email notifications and incident management
+## Phase 4 — Email notifications and incident management ✅ (2026-11-13)
 
-- (SMTP sender, outbox back-off, down/recovery/SSL alerts and preferences are already done)
-- Separate alert address with its own confirmation flow; multiple recipients per account
-- Delivery status in the UI (sent / failed / retrying) and a "send test alert" button
-- Template polish, plain-text/HTML preview tests
-- Incident history UI, incident detail with timeline
-- Tests: Mailpit-backed integration test, dedupe/idempotency tests
+- [x] Alert contacts: up to 5 extra recipients per account, each confirmed via a one-time link
+      (public confirm page; addresses never receive alerts unconfirmed); resend, pause, remove
+- [x] Account-email switch (`send_to_account_email`) replaces the unconfirmed `alert_email`
+      field (migrated to unconfirmed contacts by migration 0002)
+- [x] Signed (HMAC) unsubscribe links: confirmation page link in every alert body, RFC 8058
+      one-click `List-Unsubscribe` header; recipient opt-out sticks until re-confirmed
+- [x] Alert fan-out: one outbox row per event and recipient (account email keeps the original
+      dedupe key so upgrades never re-send), flapping protection (> 5 incidents/hour → muted)
+- [x] Test alert button and delivery log (sent / retrying / failed) in Settings
+- [x] Email templates: detail table, coloured accent per event, footer with settings and
+      unsubscribe links, all values HTML-escaped, no remote content, header-injection safe
+- [x] Incidents: status filters, cursor pagination, 30-day summary (count, open, downtime,
+      MTTR), detail page with timeline (start, alerts, acknowledgement, recovery), checks during
+      the outage, acknowledge / un-acknowledge, notes
+- [x] Fixed: long headers were RFC 2047-encoded by aiosmtplib's re-serialisation (messages
+      are now sent as raw bytes with a 998-char policy)
+- [x] Verified live with Mailpit: contact confirmation, test alerts, unsubscribe from the email
+
+Tests: 234 total (+ contacts, confirmation, unsubscribe incl. one-click, isolation, limits,
+test alert, delivery log, fan-out, flapping, incidents API, template escaping, SMTP headers).
 
 ## Phase 5 — Administrator dashboard
 

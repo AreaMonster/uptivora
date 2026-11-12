@@ -81,19 +81,34 @@ export const DOCS: DocPage[] = [
   {
     slug: "notifications",
     title: "Alerts & notifications",
-    summary: "When we email you, and how duplicates are avoided.",
+    summary: "When we email you, who receives alerts, and how duplicates are avoided.",
     body: (
       <>
-        <p>Uptivora sends email for these events:</p>
+        <h2>Events</h2>
         <ul>
-          <li><strong>Outage</strong> — once, when an incident is confirmed.</li>
+          <li><strong>Outage</strong> — once, when an incident is confirmed by a second failed check.</li>
           <li><strong>Recovery</strong> — once, when the site is reachable again, including the outage duration.</li>
-          <li><strong>SSL expiry</strong> — when a certificate expires within your warning window (14 days by default).</li>
+          <li><strong>SSL expiry</strong> — at your warning window (14 days by default), again at 7 days and 1 day, and on expiry.</li>
           <li><strong>Account emails</strong> — confirmations, password resets and security notices. These cannot be switched off.</li>
         </ul>
+        <h2>Recipients</h2>
         <p>
-          Each alert has a unique key, so even if a server restarts mid-send you will not receive
-          the same alert twice. Alerts can be muted per monitor.
+          Alerts go to your confirmed account email and to up to five extra addresses, such as a
+          team inbox or an on-call colleague. Each extra address receives a one-time confirmation
+          email and gets alerts only after confirming — Uptivora can’t be used to email people who
+          didn’t agree to it. Every alert has a one-click unsubscribe link.
+        </p>
+        <h2>No duplicates, no storms</h2>
+        <p>
+          Each alert has a unique key per event and recipient, so a server restart in the middle of
+          sending can never produce a second email. A monitor that goes down and up more than five
+          times within an hour stops emailing until it settles; the incidents are still recorded.
+        </p>
+        <h2>Delivery</h2>
+        <p>
+          Use <strong>Settings → Recipients → Send test alert</strong> to check that alerts arrive.
+          The <strong>Recent alert emails</strong> list shows whether each email was sent, is being
+          retried, or failed. Failed sends are retried with increasing delays for several hours.
         </p>
       </>
     ),

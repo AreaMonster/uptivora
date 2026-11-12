@@ -200,5 +200,5 @@ async def test_statistics_and_incidents(client, db) -> None:
     assert len(checks) == 5 and checks[0]["response_ms"] == 100
     inc = (await client.get(f"/api/monitors/{mid}/incidents")).json()
     assert inc[0]["duration_seconds"] == 600 and inc[0]["cause"] == "HTTP 503"
-    all_inc = (await client.get("/api/account/incidents")).json()
+    all_inc = (await client.get("/api/incidents")).json()["items"]
     assert all_inc[0]["monitor_name"] == "Shop"

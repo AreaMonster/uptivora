@@ -128,3 +128,52 @@ async def test_outbox_failure_is_retried_later(db, settings, monkeypatch) -> Non
     assert row.status == OutboxStatus.PENDING and row.attempts == 1
     assert "not configured" in row.last_error
     assert row.next_attempt_at > datetime.now(UTC) + timedelta(seconds=30)
+
+
+def test_list_unsubscribe_header_is_not_encoded(settings) -> None:
+    from app.notifications.mailer import EmailMessageData, build_message
+
+    url = (
+        "<https://app.example.com/api/notifications/unsubscribe?k=c&id="
+        + "a" * 36
+        + "&t="
+        + "b" * 32
+        + ">"
+    )
+    msg = build_message(
+        settings,
+        EmailMessageData(
+            "x@example.com",
+            "Subject",
+            "body",
+            None,
+            {
+                "List-Unsubscribe": url,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                "X-Evil": "no",
+                "X-Uptivora-Kind": "a\r\nBcc: victim@example.com",
+            },
+        ),
+    )
+    raw = msg.as_bytes()
+    assert b"List-Unsubscribe: " + url.encode() in raw
+    assert b"X-Evil" not in raw and b"Bcc:" not in raw  # unknown headers / CRLF injection dropped
+
+
+async def test_smtp_delivery_keeps_unsubscribe_header_literal(settings) -> None:
+    """Regression: aiosmtplib re-flattens with a 78-char policy unless we send raw bytes."""
+    if not _mailpit_up():
+        pytest.skip("Mailpit not running")
+    from app.notifications.mailer import EmailMessageData, send_email
+
+    to = f"hdr-{uuid.uuid4().hex[:8]}@example.com"
+    base = "https://app.example.com/api/notifications/unsubscribe"
+    url = f"<{base}?k=c&id={uuid.uuid4()}&t={'Z' * 32}>"
+    await send_email(
+        settings, EmailMessageData(to, "🟢 RECOVERED: x", "body", None, {"List-Unsubscribe": url})
+    )
+    with urlopen(f"http://localhost:8025/api/v1/search?query=to:{to}", timeout=5) as r:  # noqa: S310, ASYNC210
+        msg_id = json.load(r)["messages"][0]["ID"]
+    with urlopen(f"http://localhost:8025/api/v1/message/{msg_id}/headers", timeout=5) as r:  # noqa: S310, ASYNC210
+        headers = json.load(r)
+    assert headers["List-Unsubscribe"] == [url]

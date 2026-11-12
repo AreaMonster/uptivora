@@ -32,6 +32,7 @@ async def enqueue(
     subject: str,
     body_text: str,
     body_html: str | None = None,
+    headers: dict[str, str] | None = None,
     dedupe_key: str,
     user_id: uuid.UUID | None = None,
     monitor_id: uuid.UUID | None = None,
@@ -47,6 +48,7 @@ async def enqueue(
             subject=subject[:255],
             body_text=body_text,
             body_html=body_html,
+            headers=headers,
             dedupe_key=dedupe_key[:200],
             user_id=user_id,
             monitor_id=monitor_id,
@@ -87,14 +89,17 @@ async def drain_outbox(
             row.attempts += 1
             row.next_attempt_at = now + SENDING_LEASE
         claimed = [
-            (r.id, r.attempts, r.recipient, r.subject, r.body_text, r.body_html) for r in rows
+            (r.id, r.attempts, r.recipient, r.subject, r.body_text, r.body_html, r.headers)
+            for r in rows
         ]
 
     sent = 0
-    for row_id, attempts, recipient, subject, text_body, html_body in claimed:
+    for row_id, attempts, recipient, subject, text_body, html_body, headers in claimed:
         values: dict
         try:
-            await send_email(settings, EmailMessageData(recipient, subject, text_body, html_body))
+            await send_email(
+                settings, EmailMessageData(recipient, subject, text_body, html_body, headers or {})
+            )
         except MailerError as exc:
             final = attempts >= MAX_ATTEMPTS
             log.warning("Email %s to %s failed (attempt %s): %s", row_id, recipient, attempts, exc)

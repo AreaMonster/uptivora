@@ -234,7 +234,8 @@ export function MonitorDetail() {
           )}
           <ul className="divide-y divide-line">
             {incidents.data?.map((i) => (
-              <li key={i.id} className="px-5 py-3 text-sm">
+              <li key={i.id}>
+                <Link href={`/incidents/${i.id}`} className="block px-5 py-3 text-sm hover:bg-ink-750/60">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{formatDateTime(i.started_at, tz)}</span>
                   {i.resolved_at ? (
@@ -246,6 +247,7 @@ export function MonitorDetail() {
                 <p className="mt-1 text-xs text-fg-muted">
                   {i.cause || "Unreachable"} · lasted {formatDuration(i.duration_seconds)}
                 </p>
+                </Link>
               </li>
             ))}
           </ul>

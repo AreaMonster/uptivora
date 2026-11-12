@@ -14,8 +14,9 @@ PostgreSQL 15+ (developed on 17). Source of truth: `backend/app/models/`, migrat
 | Monitoring | `monitors` | config + live state + worker lease; `interval_seconds >= 30` (`CHECK`); partial index on due, unpaused monitors |
 | | `check_results` | one row per check (bigint identity); `(monitor_id, checked_at DESC)` index; retained N days |
 | | `check_rollups` | hourly aggregates, PK `(monitor_id, bucket_start)`; long-term charts |
-| | `incidents` | outage periods; **partial unique index: one open incident per monitor** |
-| Notifications | `notification_settings` | per-user preferences (down / recovery / SSL, warning days, alert email) |
+| | `incidents` | outage periods, acknowledgement and note; **partial unique index: one open incident per monitor** |
+| Notifications | `notification_settings` | per-user preferences (down / recovery / SSL, warning days, send to account email) |
+| | `alert_contacts` | extra alert recipients; receive alerts only once `verified_at` is set; unique per user |
 | | `notification_outbox` | transactional outbox; **unique `dedupe_key` prevents duplicate alerts**; retry/back-off fields |
 | Billing (hosted) | `plans` | editable catalogue (seeded Starter/Pro/Business CHF 5/12/25) |
 | | `subscriptions` | **partial unique index: one live (active/past_due/cancelled) subscription per user**; scheduled downgrade via `pending_plan_id` |
