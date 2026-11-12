@@ -17,25 +17,33 @@ Each phase ends with: code merged, automated tests passing, docs updated, and a 
 
 Not done in Phase 1 by design: HTTP routes, frontend, worker.
 
-## Phase 2 — Authentication, frontend shell, customer dashboard
+## Phase 2 — Authentication, frontend, customer dashboard ✅ (2026-11-12)
 
 Backend
-- Auth API: register, login, logout, `/me`, email verification, password reset, session list
-  and revoke; server-side sessions; CSRF header + Origin check; Postgres rate limiter
-- `LimitsProvider` (hosted: plan; self-hosted: licence) and monitor CRUD API with limit
-  enforcement and SSRF validation
-- Notification preferences API
-- Error format, request IDs, structured JSON logging
+- [x] Auth API: register, login, logout, `/me`, email verification, forgot/reset password;
+      server-side sessions (hashed tokens, idle + absolute expiry), per-session CSRF token,
+      Origin / Sec-Fetch-Site guard, uniform login errors, Postgres fixed-window rate limits
+- [x] Account API: profile + time zone, password change (revokes other sessions), session
+      list/revoke, notification preferences, incident list, account deletion
+- [x] `LimitsProvider` (`app/limits.py`): hosted = plan per user, self-hosted = licence per
+      installation (unlicensed evaluation fallback); race-safe limit checks
+- [x] Monitor API: CRUD, pause/resume, SSRF validation incl. DNS, plan interval/count limits,
+      24 h/7 d/30 d/90 d uptime from raw results + hourly rollups, chart series, recent checks
+- [x] Email outbox + SMTP sender (aiosmtplib), retry with back-off; worker process
+- [x] Self-hosted: first account becomes admin, sign-up closed afterwards (admin-controlled)
+- [x] `python -m app.cli create-user`, `python -m app.devseed` (demo data, dev only)
 
-Frontend (Next.js App Router, TypeScript, Tailwind, Recharts)
-- Design system: tokens, typography (Inter, self-hosted), buttons, inputs, cards, status pills
-- Public homepage, pricing (reads plans from API), self-hosted page, docs skeleton
-- Login / register / forgot / reset pages
-- Dashboard: monitor list with status, response time, 24 h uptime; add/edit/delete monitor;
-  monitor detail page (charts fed by API); account settings
+Frontend (Next.js 16, Tailwind 4, Recharts, self-hosted Inter font)
+- [x] Design system, homepage, pricing (live plans, TEST MODE banner), self-hosted licence
+      page, documentation (6 pages)
+- [x] Login, register (self-hosted setup mode), forgot/reset password, email confirmation
+- [x] App shell, dashboard, add/edit monitor, monitor detail with charts, incidents, settings
+- [x] Verified in a browser on desktop and 375 px mobile
 
-Tests: API tests (pytest + httpx ASGI), auth security tests (CSRF, enumeration, lockout),
-Playwright smoke test for register → add monitor.
+Tests: 177 backend tests (auth, CSRF, rate limits, SSRF, ownership isolation, plan and
+licence limits, statistics, outbox delivery via Mailpit).
+Not yet: browser E2E tests (planned with Playwright in Phase 9); plan selection/checkout
+(Phase 6); invitations (Phase 7).
 
 ## Phase 3 — Monitoring engine and background jobs
 

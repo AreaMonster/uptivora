@@ -7,7 +7,7 @@ name = "uptivora-backend"
 version = "0.1.0"
 description = "Uptivora website monitoring — API and monitoring workers"
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "LicenseRef-Proprietary"
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.32",
@@ -21,6 +21,7 @@ dependencies = [
   "httpx>=0.28",
   "aiosmtplib>=3.0",
   "email-validator>=2.2",
+  "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]

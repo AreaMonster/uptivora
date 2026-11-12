@@ -40,7 +40,10 @@ def is_local_host(host: str | None) -> bool:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix=ENV_PREFIX, env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix=ENV_PREFIX,
+        env_file=(str(Path(__file__).resolve().parents[2] / ".env"), ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     env: Literal["development", "test", "production"] = "production"
@@ -53,6 +56,14 @@ class Settings(BaseSettings):
 
     # Public base URL of the web app, used in emails and Origin checks.
     public_url: str = "http://localhost:3000"
+
+    # Reverse proxies whose X-Forwarded-For header is trusted (CIDRs).
+    trusted_proxies: list[str] = ["127.0.0.1/32", "::1/128"]
+
+    # Sessions & abuse protection
+    session_idle_days: int = Field(default=7, ge=1, le=90)
+    session_absolute_days: int = Field(default=30, ge=1, le=365)
+    rate_limit_enabled: bool = True
 
     # SMTP
     smtp_host: str = ""
@@ -117,6 +128,20 @@ class Settings(BaseSettings):
         if self.billing_provider == "stripe":
             raise ValueError("The Stripe provider is not implemented yet; use 'test' or 'disabled'")
         return self
+
+    @property
+    def public_origin(self) -> str:
+        parts = urlsplit(self.public_url)
+        return f"{parts.scheme}://{parts.netloc}"
+
+    @property
+    def secure_cookies(self) -> bool:
+        return urlsplit(self.public_url).scheme == "https"
+
+    @property
+    def session_cookie_name(self) -> str:
+        # __Host- prefix: browser enforces Secure, Path=/ and no Domain attribute.
+        return "__Host-uptivora_session" if self.secure_cookies else "uptivora_session"
 
     @property
     def is_production(self) -> bool:

@@ -1,21 +1,28 @@
-"""API process entry point: ``uvicorn app.main:app``.
-
-Phase 1 exposes only health endpoints; feature routers are added from Phase 2 onwards.
-"""
+"""API process entry point: ``uvicorn app.main:app``."""
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.account.router import router as account_router
+from app.auth.router import router as auth_router
 from app.core.config import get_settings
 from app.core.db import get_engine
+from app.core.errors import install_error_handlers
+from app.monitors.router import router as monitors_router
+from app.public.router import router as public_router
 
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
     # The API only returns JSON; nothing should ever be rendered or framed from it.
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
@@ -25,6 +32,7 @@ SECURITY_HEADERS = {
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     app = FastAPI(
         title="Uptivora API",
         version=settings.version,
@@ -32,13 +40,30 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json" if not settings.is_production else None,
     )
+    install_error_handlers(app)
+
+    @app.middleware("http")
+    async def origin_guard(request: Request, call_next) -> Response:
+        """Reject cross-site state-changing requests (CSRF defence for all endpoints,
+        including login/register which have no session yet)."""
+        if request.method not in SAFE_METHODS:
+            origin = request.headers.get("origin")
+            fetch_site = request.headers.get("sec-fetch-site")
+            if (origin and origin != settings.public_origin) or (
+                not origin and fetch_site == "cross-site"
+            ):
+                return JSONResponse(
+                    {"error": {"code": "bad_origin", "message": "Cross-site request blocked."}},
+                    status_code=403,
+                )
+        return await call_next(request)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next) -> Response:
         response = await call_next(request)
         for header, value in SECURITY_HEADERS.items():
             response.headers.setdefault(header, value)
-        if settings.is_production:
+        if settings.secure_cookies:
             response.headers.setdefault(
                 "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
             )
@@ -58,6 +83,10 @@ def create_app() -> FastAPI:
             return {"status": "unavailable", "database": "down"}
         return {"status": "ok", "database": "up", "edition": settings.edition}
 
+    app.include_router(public_router)
+    app.include_router(auth_router)
+    app.include_router(account_router)
+    app.include_router(monitors_router)
     return app
 
 

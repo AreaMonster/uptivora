@@ -9,6 +9,8 @@ STRONG = "q8Zr3xV7mK2pW9nB4tY6uJ1cL5hD0sFgAeRw"
 
 
 def make(**kw) -> Settings:
+    kw.setdefault("billing_provider", "disabled")
+    kw.setdefault("edition", "selfhosted")
     return Settings(_env_file=None, **kw)
 
 
