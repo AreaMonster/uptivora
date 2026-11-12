@@ -55,7 +55,10 @@ async def _expect_integrity_error(db: AsyncSession, coro) -> None:
 
 
 async def test_seed_catalogue(db: AsyncSession) -> None:
-    plans = (await db.scalars(select(Plan).order_by(Plan.sort_order))).all()
+    seeded = ("starter", "pro", "business")  # other tests may add plans
+    plans = (
+        await db.scalars(select(Plan).where(Plan.code.in_(seeded)).order_by(Plan.sort_order))
+    ).all()
     assert [(p.code, p.price_cents, p.max_monitors, p.currency) for p in plans] == [
         ("starter", 500, 3, "CHF"),
         ("pro", 1200, 15, "CHF"),

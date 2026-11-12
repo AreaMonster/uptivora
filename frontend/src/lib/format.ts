@@ -69,3 +69,21 @@ export function hostOf(url: string): string {
     return url;
   }
 }
+
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let i = 0;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i++;
+  }
+  return `${value >= 10 || i === 0 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
+}
+
+const numberFormat = new Intl.NumberFormat("en-US");
+
+export function formatNumber(n: number | null | undefined): string {
+  return n == null ? "—" : numberFormat.format(n);
+}

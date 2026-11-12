@@ -12,7 +12,7 @@ import signal
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from app.core import ratelimit
+from app.core import eventlog, ratelimit
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
 from app.engine import housekeeping as hk
@@ -59,6 +59,7 @@ async def run() -> None:
         except (NotImplementedError, RuntimeError):  # Windows dev machines
             signal.signal(sig, lambda *_: stop.set())
 
+    eventlog.install()
     worker_id = new_worker_id()
     started_at = datetime.now(UTC)
     clients = build_clients(max_connections=settings.worker_concurrency * 2)
@@ -78,6 +79,7 @@ async def run() -> None:
                 stop,
             ),
             _periodic("outbox", 5, lambda: drain_outbox(maker, settings), stop),
+            _periodic("eventlog", 10, lambda: eventlog.flush_events(maker), stop),
             _periodic(
                 "rollup",
                 600,
@@ -107,8 +109,9 @@ async def run() -> None:
             await hk.remove_heartbeat(maker, worker_id)
         except Exception:  # noqa: BLE001
             log.warning("Could not remove heartbeat for %s", worker_id)
-        await get_engine().dispose()
         log.info("Worker %s stopped", worker_id)
+        await eventlog.flush_events(maker)
+        await get_engine().dispose()
 
 
 def main() -> None:

@@ -4,7 +4,9 @@ Creates a demo account with a TEST subscription and synthetic monitoring history
 can be explored before real checks exist. Refuses to run outside development.
 
 Demo login: demo@example.com / value of UPTIVORA_DEV_DEMO_PASSWORD
-(default: ``uptivora-demo-password``). Development databases only.
+(default: ``uptivora-demo-password``).
+Admin login: admin@example.com / value of UPTIVORA_DEV_ADMIN_PASSWORD
+(default: ``uptivora-admin-password``). Development databases only.
 """
 
 from __future__ import annotations
@@ -28,10 +30,13 @@ from app.models import (
     Plan,
     Subscription,
     SubscriptionStatus,
+    UserRole,
 )
 
 DEMO_EMAIL = "demo@example.com"
 DEMO_PASSWORD = os.environ.get("UPTIVORA_DEV_DEMO_PASSWORD", "uptivora-demo-password")
+ADMIN_EMAIL = "admin@example.com"
+ADMIN_PASSWORD = os.environ.get("UPTIVORA_DEV_ADMIN_PASSWORD", "uptivora-admin-password")
 
 SITES = [
     ("Online shop", "https://shop.example.com/", 180, None),
@@ -39,6 +44,19 @@ SITES = [
     ("Customer API", "https://api.example.net/health", 240, "down"),
     ("Status page", "https://status.example.org/", 70, "ssl"),
 ]
+
+
+async def ensure_admin() -> None:
+    """Create the development administrator account if it does not exist (idempotent)."""
+    if get_settings().env != "development":
+        raise SystemExit("devseed only runs with UPTIVORA_ENV=development")
+    async with get_sessionmaker()() as db:
+        if await get_user_by_email(db, ADMIN_EMAIL) is None:
+            admin = await create_user(db, email=ADMIN_EMAIL, password=ADMIN_PASSWORD,
+                                      full_name="Dev Admin", role=UserRole.ADMIN)
+            admin.email_verified_at = datetime.now(UTC)
+            await db.commit()
+            print(f"Created development admin {ADMIN_EMAIL}")
 
 
 async def seed() -> None:
@@ -135,6 +153,7 @@ async def seed() -> None:
                     )
                 )
         await db.commit()
+    await ensure_admin()
     await get_engine().dispose()
     print(f"Seeded demo account {DEMO_EMAIL} with {len(SITES)} monitors and 7 days of history.")
 

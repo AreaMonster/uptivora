@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
@@ -113,6 +114,14 @@ function Frame({ children }: { children: ReactNode }) {
         <Suspense fallback={<StaticNavLinks />}>
           <NavLinks onNavigate={onNavigate} />
         </Suspense>
+        {me.user.role === "admin" && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-warn/90 hover:bg-ink-800 hover:text-warn"
+          >
+            <ShieldCheck className="h-4 w-4" aria-hidden /> Admin
+          </Link>
+        )}
         <Link
           href="/docs"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted hover:bg-ink-800 hover:text-fg"
