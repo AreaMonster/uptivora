@@ -95,14 +95,32 @@ Not yet: checks from multiple locations (roadmap item), 10k-monitor load test (P
 Tests: 234 total (+ contacts, confirmation, unsubscribe incl. one-click, isolation, limits,
 test alert, delivery log, fan-out, flapping, incidents API, template escaping, SMTP headers).
 
-## Phase 5 — Administrator dashboard
+## Phase 5 — Administrator dashboard ✅ (2026-11-12)
 
-- Admin API + UI: KPIs (customers, active/cancelled subscriptions, monitors, checks/min),
-  server/DB/worker health, recent incidents, system events log, audit log
-- User management (search, suspend, role, impersonation-free support view), plan editor,
-  usage limits, pause abusive monitors
-- Development-only tools: create test accounts, issue **dev-key** test licences
-- Tests: RBAC tests on every admin route (user → 403)
+- [x] Separate admin area (`/admin`, own layout with amber accent) — only for admins; admins
+      also get an "Admin" link in the app sidebar
+- [x] Overview: users, subscriptions, MRR (TEST MODE revenue shown separately), monitors,
+      checks per minute, failed checks, alert emails, 24 h checks chart, recent incidents and
+      warnings, health banner
+- [x] System health: database (latency, size, connections, largest tables), workers with
+      heartbeats, overdue checks, email queue / SMTP, disk, load; issues called out in plain words
+- [x] Users: search, filters, pagination, read-only support view (no "log in as"), suspend /
+      reactivate (revokes sessions), grant / remove admin, sign out all sessions; self-lockout
+      and last-admin protection
+- [x] Monitor moderation: search all monitors, pause with an internal reason (owner cannot
+      resume), lift admin pauses only
+- [x] Plan editor (price, limits, visibility, new plans) and self-hosted licence prices/limits;
+      every change in the audit log with before/after values
+- [x] Application log (buffered handler → `system_events`, flushed by API and worker) and
+      audit log with filters; runtime setting for open sign-up (self-hosted)
+- [x] Development-only tools (never mounted in production, re-checked per request): test
+      accounts with TEST subscriptions, DEV-signed test licences (no key material returned)
+- [x] Fixed during testing: log handler deadlock (own lock shadowed `logging.Handler.lock`)
+- [x] Verified in the browser as the dev admin on desktop and 375 px mobile
+
+Tests: 249 backend tests — new: RBAC test that discovers every `/api/admin` route from the
+OpenAPI schema (anonymous → 401, user → 403), overview/health, user management, monitor
+moderation, plan and licence editors, settings, event log, dev tools on/off.
 
 ## Phase 6 — Subscription management and TEST MODE payment simulator
 

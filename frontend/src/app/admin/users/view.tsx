@@ -60,14 +60,14 @@ export function UsersView() {
       {data && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[620px] text-sm">
               <thead className="border-b border-line text-left text-xs text-fg-subtle">
                 <tr>
                   <th className="px-5 py-3 font-medium">User</th>
                   <th className="px-2 py-3 font-medium">Plan</th>
                   <th className="px-2 py-3 text-right font-medium">Monitors</th>
                   <th className="px-2 py-3 font-medium">Status</th>
-                  <th className="px-2 py-3 font-medium">Joined</th>
+                  <th className="hidden px-2 py-3 font-medium lg:table-cell">Joined</th>
                   <th className="px-5 py-3 font-medium">Last login</th>
                 </tr>
               </thead>
@@ -87,8 +87,8 @@ export function UsersView() {
                         {!u.email_verified && <Badge>Unconfirmed</Badge>}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-fg-muted">{timeAgo(u.created_at)}</td>
-                    <td className="px-5 py-3 text-fg-muted">{u.last_login_at ? timeAgo(u.last_login_at) : "never"}</td>
+                    <td className="hidden whitespace-nowrap px-2 py-3 text-fg-muted lg:table-cell">{timeAgo(u.created_at)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-fg-muted">{u.last_login_at ? timeAgo(u.last_login_at) : "never"}</td>
                   </tr>
                 ))}
               </tbody>

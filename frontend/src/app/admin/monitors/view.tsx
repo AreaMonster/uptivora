@@ -92,14 +92,14 @@ export function MonitorsView() {
       {data && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="border-b border-line text-left text-xs text-fg-subtle">
                 <tr>
                   <th className="px-5 py-3 font-medium">Monitor</th>
                   <th className="px-2 py-3 font-medium">Owner</th>
                   <th className="px-2 py-3 font-medium">Status</th>
-                  <th className="px-2 py-3 font-medium">Interval</th>
-                  <th className="px-2 py-3 font-medium">Last check</th>
+                  <th className="hidden px-2 py-3 font-medium xl:table-cell">Interval</th>
+                  <th className="hidden px-2 py-3 font-medium xl:table-cell">Last check</th>
                   <th className="px-5 py-3 text-right font-medium">Action</th>
                 </tr>
               </thead>
@@ -119,9 +119,9 @@ export function MonitorsView() {
                         {m.paused_reason === "admin" && <Badge tone="warn">Admin</Badge>}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-fg-muted">{formatInterval(m.interval_seconds)}</td>
-                    <td className="px-2 py-3 text-fg-muted">{m.last_checked_at ? timeAgo(m.last_checked_at) : "never"}</td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="hidden whitespace-nowrap px-2 py-3 text-fg-muted xl:table-cell">{formatInterval(m.interval_seconds)}</td>
+                    <td className="hidden whitespace-nowrap px-2 py-3 text-fg-muted xl:table-cell">{m.last_checked_at ? timeAgo(m.last_checked_at) : "never"}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-right">
                       {m.paused_reason === "admin" ? (
                         <Button size="sm" variant="secondary" loading={busy === m.id} onClick={() => resume(m)}>Resume</Button>
                       ) : !m.is_paused ? (

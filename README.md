@@ -51,8 +51,8 @@ Frontend (Node 20+), proxies `/api/*` to port 8000:
 cd frontend && npm install && npm run dev
 ```
 
-Open http://localhost:3000. The dev seed creates `demo@example.com` (password in
-`backend/app/devseed.py`). Captured emails: http://localhost:8025.
+Open http://localhost:3000. The dev seed creates `demo@example.com` and the administrator `admin@example.com`
+(passwords in `backend/app/devseed.py`; admin area at `/admin`). Captured emails: http://localhost:8025.
 
 Monitoring worker (runs the checks, sends emails, housekeeping):
 

@@ -12,7 +12,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-4 py-2 text-sm">
       <dt className="text-fg-muted">{label}</dt>
-      <dd className="tnum min-w-0 truncate text-right">{value}</dd>
+      <dd className="tnum min-w-0 break-words text-right">{value}</dd>
     </div>
   );
 }
@@ -46,7 +46,7 @@ export function SystemView() {
         </Alert>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
         <Card title="Application">
           <dl className="divide-y divide-line">
             <Row label="Version" value={h.app.version} />
@@ -114,6 +114,11 @@ export function SystemView() {
               </tbody>
             </table>
           </div>
+        )}
+        {h.workers.some((w) => !w.alive) && (
+          <p className="border-t border-line px-5 py-3 text-xs text-fg-subtle">
+            Stale entries come from workers that stopped without shutting down cleanly; they are removed automatically after 24 hours.
+          </p>
         )}
       </section>
 
