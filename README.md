@@ -54,7 +54,7 @@ cd frontend && npm install && npm run dev
 Open http://localhost:3000. The dev seed creates `demo@example.com` (password in
 `backend/app/devseed.py`). Captured emails: http://localhost:8025.
 
-Optional background worker (sends queued emails):
+Monitoring worker (runs the checks, sends emails, housekeeping):
 
 ```bash
 cd backend && .venv/Scripts/python -m app.worker

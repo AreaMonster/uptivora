@@ -45,23 +45,39 @@ licence limits, statistics, outbox delivery via Mailpit).
 Not yet: browser E2E tests (planned with Playwright in Phase 9); plan selection/checkout
 (Phase 6); invitations (Phase 7).
 
-## Phase 3 — Monitoring engine and background jobs
+## Phase 3 — Monitoring engine and background jobs ✅ (2026-11-12)
 
-- `GuardedNetworkBackend` (httpcore) — dial only validated IPs, SNI/Host preserved
-- Check executor: timeouts (connect/read/total), manual redirect handling with re-validation,
-  status-range and optional keyword matching, body cap, TLS certificate capture
-- Scheduler loop with `FOR UPDATE SKIP LOCKED` leases, jitter, concurrency semaphore,
-  per-host concurrency cap, graceful shutdown, crash recovery via lease expiry
-- Incident state machine (thresholds, confirmation re-check, single open incident)
-- Housekeeping loops (advisory-locked): hourly rollups, retention, SSL sweep, heartbeats
-- Tests: local test HTTP servers (up/down/slow/redirect-to-private/rebinding DNS stub),
-  state machine property tests, load test with 2 000 simulated monitors
+- [x] `GuardedNetworkBackend` (httpcore): resolves DNS itself, refuses if any address is not
+      public, dials only the validated IP; TLS SNI/verification still use the hostname
+      (DNS-rebinding safe); no proxies from the environment; keep-alive disabled
+- [x] Check executor (`app/engine/checker.py`): total deadline incl. redirects, manual
+      redirects (max 5) re-validated on every hop, HTTPS→HTTP downgrade refused, expected
+      status ranges, keyword search (1 MiB body cap), TLS certificate capture (expiry, issuer),
+      error classification (timeout, dns, tls, connection, protocol, blocked, …)
+- [x] Scheduler (`app/engine/scheduler.py`): `FOR UPDATE SKIP LOCKED` leases (120 s),
+      concurrency limit, max 2 concurrent checks per host, suspended owners skipped,
+      graceful drain, crash recovery via lease expiry, horizontal scaling
+- [x] State machine (`app/engine/state.py`): confirmation re-check after 30 s, configurable
+      down/recovery thresholds, one incident per outage starting at the first failure
+- [x] Outage / recovery alert emails queued in the same transaction (deduplicated), only to
+      confirmed addresses and respecting preferences *(moved forward from Phase 4)*
+- [x] Housekeeping under advisory locks: hourly rollups (incl. p95), retention purge,
+      SSL expiry warnings (window / 7 d / 1 d / expired, each sent once), worker heartbeats
+- [x] Verified live: real check of https://example.com (status, latency, certificate) and a
+      real outage → incident → alert email delivered via SMTP
+
+Tests: 216 total. New: 14 executor tests against real local HTTP/HTTPS servers (redirects,
+timeouts, TLS, SSRF via redirect, DNS rebinding, mixed DNS answers), state-machine property
+test, scheduler lifecycle, lease/double-claim, 3 concurrent workers × 300 monitors (each checked
+exactly once), rollups, retention, SSL dedupe, advisory locks.
+Not yet: checks from multiple locations (roadmap item), 10k-monitor load test (Phase 9).
 
 ## Phase 4 — Email notifications and incident management
 
-- SMTP sender (aiosmtplib) with STARTTLS/TLS, outbox loop with back-off, dead-letter state
-- Templates (plain text + simple HTML): down, recovery, SSL expiring/error, verify email,
-  password reset, account changes; per-user preferences, per-monitor mute
+- (SMTP sender, outbox back-off, down/recovery/SSL alerts and preferences are already done)
+- Separate alert address with its own confirmation flow; multiple recipients per account
+- Delivery status in the UI (sent / failed / retrying) and a "send test alert" button
+- Template polish, plain-text/HTML preview tests
 - Incident history UI, incident detail with timeline
 - Tests: Mailpit-backed integration test, dedupe/idempotency tests
 

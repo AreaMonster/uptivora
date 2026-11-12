@@ -87,3 +87,62 @@ def password_changed(name: str, url: str) -> RenderedEmail:
         _text(title, paras, url),
         _html(title, paras, ("Reset password", url)),
     )
+
+
+def _fmt_duration(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    if seconds < 60:
+        return f"{seconds} seconds"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} min"
+    hours, minutes = divmod(minutes, 60)
+    if hours < 48:
+        return f"{hours} h {minutes} min"
+    days, hours = divmod(hours, 24)
+    return f"{days} d {hours} h"
+
+
+def monitor_down(name: str, url: str, cause: str, started: str, link: str) -> RenderedEmail:
+    title = f"{name} is down"
+    paras = [
+        f"Uptivora could not reach {url}.",
+        f"Cause: {cause}",
+        f"Down since: {started}",
+        "We will email you again as soon as it is back up.",
+    ]
+    return RenderedEmail(
+        f"🔴 DOWN: {name}", _text(title, paras, link), _html(title, paras, ("View monitor", link))
+    )
+
+
+def monitor_up(name: str, url: str, duration_seconds: int, cause: str, link: str) -> RenderedEmail:
+    title = f"{name} is back up"
+    paras = [
+        f"{url} is reachable again.",
+        f"The outage lasted {_fmt_duration(duration_seconds)}.",
+        f"Cause: {cause}" if cause else "",
+    ]
+    paras = [p for p in paras if p]
+    return RenderedEmail(
+        f"🟢 RECOVERED: {name} (down {_fmt_duration(duration_seconds)})",
+        _text(title, paras, link),
+        _html(title, paras, ("View incident history", link)),
+    )
+
+
+def ssl_expiring(name: str, url: str, days: int, expires: str, link: str) -> RenderedEmail:
+    if days < 0:
+        title = f"The SSL certificate of {name} has expired"
+        subject = f"⚠️ SSL certificate EXPIRED: {name}"
+        lead = (
+            f"The certificate for {url} expired on {expires}. Visitors now see security warnings."
+        )
+    else:
+        title = f"The SSL certificate of {name} expires in {days} days"
+        subject = f"⚠️ SSL certificate expires in {days} days: {name}"
+        lead = f"The certificate for {url} expires on {expires}."
+    paras = [lead, "Renew the certificate (or check your automatic renewal) to avoid an outage."]
+    return RenderedEmail(
+        subject, _text(title, paras, link), _html(title, paras, ("View monitor", link))
+    )

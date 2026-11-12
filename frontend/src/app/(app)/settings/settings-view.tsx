@@ -139,6 +139,7 @@ function PlanSection() {
 type Prefs = { notify_down: boolean; notify_recovery: boolean; notify_ssl: boolean; ssl_warning_days: number; alert_email: string | null };
 
 function NotificationsSection() {
+  const { me } = useAuth();
   const { data, setData } = useApi<Prefs>("/api/account/notifications");
   const [fields, setFields] = useState<FieldErrors>({});
   const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -180,9 +181,9 @@ function NotificationsSection() {
             <TextField label="Warn days before expiry" type="number" min={1} max={90}
               value={data.ssl_warning_days} error={fields.ssl_warning_days}
               onChange={(e) => setData({ ...data, ssl_warning_days: Number(e.target.value) })} />
-            <TextField label="Send alerts to (optional)" type="email" placeholder="Your account email"
-              value={data.alert_email ?? ""} error={fields.alert_email}
-              onChange={(e) => setData({ ...data, alert_email: e.target.value })} />
+            <TextField label="Alerts are sent to" type="email" disabled
+              value={me?.user.email ?? ""}
+              hint="Your confirmed account email. A separate, confirmed alert address is coming soon." />
           </div>
           <div className="flex justify-end"><Button type="submit" loading={busy}>Save notifications</Button></div>
         </form>

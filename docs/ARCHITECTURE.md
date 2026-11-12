@@ -1,6 +1,6 @@
 # Uptivora — Architecture
 
-Status: Phase 1 design (2026-11-12). This document is the source of truth for how the
+Status: Phases 1–3 implemented (2026-11-12). This document is the source of truth for how the
 system is put together. Changes to it should be deliberate.
 
 ## 1. Guiding constraints
