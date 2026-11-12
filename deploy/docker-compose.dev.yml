@@ -1,0 +1,21 @@
+# Development services only (database + mail catcher). App processes run on the host.
+#   docker compose -f deploy/docker-compose.dev.yml up -d
+name: uptivora-dev
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: uptivora
+      POSTGRES_PASSWORD: uptivora
+      POSTGRES_DB: uptivora
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uptivora"]
+      interval: 2s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+volumes:
+  dbdata:

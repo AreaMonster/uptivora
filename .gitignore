@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Env & secrets — NEVER commit signing keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.dev-keys/
+secrets/
+license/*.license
+*.uptivora-license
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
