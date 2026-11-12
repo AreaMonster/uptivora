@@ -7,20 +7,22 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from sqlalchemy import func, select, text
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.licensing import UNLICENSED_LIMITS
-from app.models import Monitor, Plan, Subscription, User, UserRole
+from app.models import Monitor, Plan, Subscription, SubscriptionStatus, User, UserRole
 from app.models.billing import LIVE_SUBSCRIPTION_STATUSES
 from app.models.monitors import ENGINE_MIN_INTERVAL_SECONDS
 from app.selfhosted.licence import licence_status
 
 NO_PLAN_MIN_INTERVAL = 300
+# Past-due subscriptions keep working this long after the period ended (payment retries).
+PAST_DUE_GRACE = timedelta(days=7)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +53,13 @@ async def live_subscription(db: AsyncSession, user_id) -> tuple[Subscription, Pl
             .where(
                 Subscription.user_id == user_id,
                 Subscription.status.in_(LIVE_SUBSCRIPTION_STATUSES),
-                Subscription.current_period_end > datetime.now(UTC),
+                or_(
+                    Subscription.current_period_end > datetime.now(UTC),
+                    and_(
+                        Subscription.status == SubscriptionStatus.PAST_DUE,
+                        Subscription.current_period_end > datetime.now(UTC) - PAST_DUE_GRACE,
+                    ),
+                ),
             )
         )
     ).first()

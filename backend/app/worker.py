@@ -12,6 +12,7 @@ import signal
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
+from app.billing.service import process_due_subscriptions
 from app.core import eventlog, ratelimit
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
@@ -102,6 +103,15 @@ async def run() -> None:
                 initial_delay=120,
             ),
             _periodic("ratelimit-purge", 3600, ratelimit.purge_expired, stop, initial_delay=300),
+            _periodic(
+                "billing",
+                600,
+                locked("billing", lambda: process_due_subscriptions(maker, settings)),
+                stop,
+                initial_delay=30,
+            )
+            if settings.is_hosted
+            else asyncio.sleep(0),
         )
     finally:
         await clients.aclose()

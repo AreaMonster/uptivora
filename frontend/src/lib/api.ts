@@ -242,3 +242,55 @@ export type IncidentDetail = {
     last_error: string | null;
   }[];
 };
+
+export type BillingPlan = Plan & { interval: string };
+
+export type BillingSummary = {
+  enabled: boolean;
+  test_mode: boolean;
+  subscription: {
+    plan: BillingPlan;
+    status: "active" | "past_due" | "cancelled";
+    is_test: boolean;
+    provider: string;
+    current_period_start: string;
+    current_period_end: string;
+    cancel_at_period_end: boolean;
+    pending_plan: BillingPlan | null;
+    simulate_failure: boolean;
+    grace_until: string | null;
+  } | null;
+  usage: { active_monitors: number };
+  plans: BillingPlan[];
+  payments: {
+    id: string;
+    amount_cents: number;
+    currency: string;
+    status: "pending" | "succeeded" | "failed" | "refunded";
+    description: string;
+    is_test: boolean;
+    created_at: string;
+  }[];
+  licence_products: LicenceProduct[];
+  licence_orders: {
+    id: string;
+    product: string;
+    status: "pending_payment" | "paid" | "fulfilled" | "refunded" | "cancelled";
+    price_cents: number;
+    currency: string;
+    is_test: boolean;
+    licensee_name: string;
+    created_at: string;
+    fulfilled_at: string | null;
+  }[];
+};
+
+export type BillingQuote = {
+  action: "subscribe" | "upgrade" | "downgrade" | "none";
+  amount_cents: number;
+  currency: string;
+  effective_at: string;
+  plan: BillingPlan;
+  current_plan: BillingPlan | null;
+  test_mode: boolean;
+};

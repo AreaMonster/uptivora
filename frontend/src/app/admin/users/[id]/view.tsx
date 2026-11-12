@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Alert, Badge, Button, ConfirmDialog, Skeleton, StatusPill } from "@/components/ui";
+import { Alert, Badge, Button, ConfirmDialog, SelectField, Skeleton, StatusPill } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
-import type { AdminUserDetail } from "@/lib/admin-types";
+import type { AdminPlan, AdminUserDetail } from "@/lib/admin-types";
 import { useAuth } from "@/lib/auth";
 import { formatDateTime, formatInterval, hostOf, timeAgo } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
@@ -100,6 +100,10 @@ export function UserDetailView() {
               <div className="flex justify-between"><dt className="text-fg-muted">Provider</dt><dd>{data.subscription.provider}</dd></div>
             </dl>
           ) : <p className="mt-3 text-sm text-fg-muted">No active subscription.</p>}
+          {data.limits.scope === "user" && <AssignPlan userId={u.id} onDone={async () => {
+            setMsg({ tone: "success", text: "Plan assigned." });
+            await reload();
+          }} />}
         </section>
         <section className="card p-5">
           <h2 className="font-semibold">Limits & usage</h2>
@@ -147,6 +151,51 @@ export function UserDetailView() {
       <ConfirmDialog open={pending !== null} title={pending?.title ?? ""} confirmLabel={pending?.confirm ?? ""}
         tone={pending?.tone} loading={busy} onConfirm={execute} onCancel={() => setPending(null)}>
         {pending?.text}
+      </ConfirmDialog>
+    </>
+  );
+}
+
+function AssignPlan({ userId, onDone }: { userId: string; onDone: () => Promise<void> }) {
+  const { data: plans } = useApi<AdminPlan[]>("/api/admin/plans");
+  const [open, setOpen] = useState(false);
+  const [plan, setPlan] = useState("");
+  const [months, setMonths] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!plans) return null;
+
+  async function assign() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/admin/users/${userId}/subscription`, {
+        method: "POST", body: { plan_code: plan || plans?.[0]?.code, months },
+      });
+      setOpen(false);
+      await onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not assign the plan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="ghost" className="mt-3 px-0" onClick={() => setOpen(true)}>Assign plan…</Button>
+      <ConfirmDialog open={open} tone="primary" title="Assign a plan without payment" confirmLabel="Assign plan"
+        loading={busy} onConfirm={assign} onCancel={() => setOpen(false)}>
+        <p>For complimentary accounts or customers invoiced outside Uptivora. It replaces any current subscription and ends automatically.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <SelectField label="Plan" value={plan || plans[0]?.code} onChange={(e) => setPlan(e.target.value)}>
+            {plans.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+          </SelectField>
+          <SelectField label="Duration" value={months} onChange={(e) => setMonths(Number(e.target.value))}>
+            {[1, 3, 6, 12, 24].map((m) => <option key={m} value={m}>{m} month{m > 1 ? "s" : ""}</option>)}
+          </SelectField>
+        </div>
+        {error && <p className="mt-3 text-xs text-[#fda4af]">{error}</p>}
       </ConfirmDialog>
     </>
   );

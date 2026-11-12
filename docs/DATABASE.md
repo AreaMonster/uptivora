@@ -19,7 +19,7 @@ PostgreSQL 15+ (developed on 17). Source of truth: `backend/app/models/`, migrat
 | | `alert_contacts` | extra alert recipients; receive alerts only once `verified_at` is set; unique per user |
 | | `notification_outbox` | transactional outbox; **unique `dedupe_key` prevents duplicate alerts**; retry/back-off fields |
 | Billing (hosted) | `plans` | editable catalogue (seeded Starter/Pro/Business CHF 5/12/25) |
-| | `subscriptions` | **partial unique index: one live (active/past_due/cancelled) subscription per user**; scheduled downgrade via `pending_plan_id` |
+| | `subscriptions` | **partial unique index: one live (active/past_due/cancelled) subscription per user**; scheduled downgrade via `pending_plan_id`; `simulate_failure` (TEST MODE only) and `last_payment_attempt_at` for retries |
 | | `payments` | every row has `is_test`; unique `(provider, provider_payment_id)` for idempotency |
 | | `license_products` | self-hosted products (seeded CHF 99 / 199), signed limits template |
 | | `license_orders` | purchase → offline signing → signed licence text attached |

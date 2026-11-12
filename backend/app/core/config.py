@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     # Billing (hosted edition only)
     billing_provider: Literal["disabled", "test", "stripe"] = "disabled"
     allow_test_billing_in_production: bool = False
+    stripe_webhook_secret: SecretStr = Field(default=SecretStr(""))  # future real provider
 
     # Licensing (self-hosted edition)
     license_path: Path | None = None

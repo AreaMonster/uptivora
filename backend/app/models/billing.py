@@ -98,9 +98,12 @@ class Subscription(UUIDPrimaryKey, Timestamps, Base):
     pending_plan_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("plans.id", ondelete="SET NULL")
     )
-    provider: Mapped[str] = mapped_column(String(32))  # "test" | "stripe"
+    provider: Mapped[str] = mapped_column(String(32))  # "test" | "manual" | "stripe"
     provider_subscription_id: Mapped[str | None] = mapped_column(String(255))
     is_test: Mapped[bool]
+    # TEST MODE only: make the next simulated renewal charge fail (ignored by real providers).
+    simulate_failure: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    last_payment_attempt_at: Mapped[datetime | None]
 
 
 class PaymentStatus(enum.StrEnum):

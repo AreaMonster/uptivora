@@ -123,10 +123,10 @@ export function Dashboard() {
         <EmptyState
           icon={<CreditCard className="h-5 w-5" />}
           title="Choose a plan to start monitoring"
-          action={<ButtonLink href="/pricing">Compare plans</ButtonLink>}
+          action={<ButtonLink href="/billing">Choose a plan</ButtonLink>}
         >
-          Your account is ready, but it doesn’t have an active plan yet. Online plan selection is
-          being finalised — until then, our team can activate a plan for you.
+          Your account is ready, but it doesn’t have an active plan yet. Plans start at CHF 5 per
+          month and can be cancelled any time.
         </EmptyState>
       ) : loading && !monitors ? (
         <div className="space-y-3">

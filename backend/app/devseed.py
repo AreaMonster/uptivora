@@ -52,8 +52,13 @@ async def ensure_admin() -> None:
         raise SystemExit("devseed only runs with UPTIVORA_ENV=development")
     async with get_sessionmaker()() as db:
         if await get_user_by_email(db, ADMIN_EMAIL) is None:
-            admin = await create_user(db, email=ADMIN_EMAIL, password=ADMIN_PASSWORD,
-                                      full_name="Dev Admin", role=UserRole.ADMIN)
+            admin = await create_user(
+                db,
+                email=ADMIN_EMAIL,
+                password=ADMIN_PASSWORD,
+                full_name="Dev Admin",
+                role=UserRole.ADMIN,
+            )
             admin.email_verified_at = datetime.now(UTC)
             await db.commit()
             print(f"Created development admin {ADMIN_EMAIL}")

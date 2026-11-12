@@ -28,7 +28,8 @@ export function RegisterForm() {
     try {
       const me = await api<Me>("/api/auth/register", { method: "POST", body: form });
       setCsrfToken(me.csrf_token);
-      router.replace("/dashboard?welcome=1");
+      const chosen = params.get("plan");
+      router.replace(chosen ? `/billing?plan=${encodeURIComponent(chosen)}` : "/dashboard?welcome=1");
     } catch (err) {
       if (err instanceof ApiError) {
         setFields(err.fields);

@@ -122,16 +122,41 @@ Tests: 249 backend tests — new: RBAC test that discovers every `/api/admin` ro
 OpenAPI schema (anonymous → 401, user → 403), overview/health, user management, monitor
 moderation, plan and licence editors, settings, event log, dev tools on/off.
 
-## Phase 6 — Subscription management and TEST MODE payment simulator
+## Phase 6 — Subscriptions and TEST MODE payment simulator ✅ (2026-11-12)
 
-- `PaymentProvider` interface; `TestModeProvider` (simulated checkout, success/failure
-  toggles, renewal, `is_test` everywhere, persistent TEST MODE banner, `[TEST]` emails)
-- Subscribe, upgrade (immediate, prorated in test mode), downgrade (period end, excess
-  monitors paused), cancel / resume, renewal + past_due + expiry jobs
-- Self-hosted licence storefront (hosted edition): order → TEST payment → admin attaches
-  signed licence → customer download
-- Stripe adapter skeleton with webhook signature verification + idempotency, **disabled**
-- Tests: full subscription lifecycle, limit changes, webhook signature tests
+- [x] `PaymentProvider` interface (`app/billing/providers.py`): `TestModeProvider` (simulated
+      success/decline, never touches the network, every payment stored with `is_test`),
+      `ManualProvider` (admin-assigned plans), `StripeProvider` skeleton — disabled
+- [x] Stripe webhook signature verification (`t=…,v1=…`, HMAC-SHA256, 5-minute replay window,
+      multiple signatures) and idempotent event log (`webhook_events`); endpoint inactive
+      until the provider is enabled
+- [x] Subscribe (full month), upgrade (immediate, prorated for the rest of the period),
+      downgrade (scheduled for period end, can be undone), cancel (works until period end),
+      resume; past-due subscriptions cannot change plans until paid
+- [x] Worker billing job (advisory lock, every 10 min): renewals with scheduled downgrades,
+      failed renewal → past due with 7-day grace and daily retries, expiry, catch-up after
+      downtime; manual plans expire silently
+- [x] Monitor rebalancing on every limit change: newest monitors over the limit paused
+      (`plan_limit`, never deleted), resumed automatically when there is room again,
+      intervals raised to the plan minimum
+- [x] Billing emails (receipt, payment failed, subscription ended, licence ready) prefixed
+      `[TEST]` with a "no money was charged" note in test mode
+- [x] Self-hosted licence store: order + TEST payment → admin attaches the offline-signed file
+      (verified with the embedded public keys, edition must match, a licence can only serve
+      one order) → customer download; refunds of test orders
+- [x] UI: Billing page (current plan, plan cards with upgrade/downgrade, test checkout with
+      success/decline card, past-due retry, "fail next renewal" test switch, payment history,
+      licence store and downloads), persistent TEST MODE bar in the app, sign-up with
+      `?plan=` continues to checkout; admin "Billing & licences" (orders, fulfilment, payments)
+      and "Assign plan" on users
+- [x] Verified in the browser: declined + successful prorated upgrade, licence purchase,
+      admin fulfilment with a licensegen-signed file, customer download verified offline
+
+Tests: 263 backend tests (+14: lifecycle, proration, decline, downgrade pausing, cancel/
+resume/expiry with auto-resume, past due/retry/grace, disabled/self-hosted, manual plans,
+licence store end to end, Stripe signatures, webhook idempotency, nothing deleted).
+Not yet: real payment provider (requires a merchant account — Stripe adapter is a stub),
+VAT handling and invoices as PDF (Phase 10 / legal review).
 
 ## Phase 7 — Self-hosted edition and offline licence verification
 

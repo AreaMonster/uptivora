@@ -7,6 +7,7 @@ import {
   Alert,
   Badge,
   Button,
+  ButtonLink,
   ConfirmDialog,
   PageHeader,
   SelectField,
@@ -117,9 +118,9 @@ function PlanSection() {
         )}
       </dl>
       {limits.scope === "user" && (
-        <p className="mt-5 text-sm text-fg-muted">
-          Online upgrades, downgrades and billing history are coming to this page soon.
-        </p>
+        <ButtonLink href="/billing" variant="secondary" className="mt-5">
+          Manage plan & billing
+        </ButtonLink>
       )}
     </SettingsSection>
   );

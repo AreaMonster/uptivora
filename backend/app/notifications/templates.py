@@ -284,3 +284,78 @@ def alert_test_email(owner_email: str, link: str, footer: Footer | None = None) 
         _html(title, paras, ("Open Uptivora", link), footer=footer, tone="info"),
         _unsubscribe_headers(footer),
     )
+
+
+# --- billing (subjects carry "[TEST]" for simulated payments) ------------------------------
+
+
+def _billing_subject(subject: str, is_test: bool) -> str:
+    return _clean_subject(f"[TEST] {subject}" if is_test else subject)
+
+
+def _test_note(is_test: bool) -> list[str]:
+    return ["TEST MODE: this payment was simulated. No money was charged."] if is_test else []
+
+
+def billing_receipt(
+    plan: str, amount: str, description: str, period_end: str, link: str, is_test: bool
+) -> RenderedEmail:
+    title = "Payment received — thank you"
+    paras = [*_test_note(is_test), f"We received your payment for the {plan} plan."]
+    details = [
+        ("Plan", plan),
+        ("Amount", amount),
+        ("For", description),
+        ("Next renewal", period_end),
+    ]
+    return RenderedEmail(
+        _billing_subject(f"Uptivora receipt: {amount}", is_test),
+        _text(title, paras, link, details=details),
+        _html(title, paras, ("View billing", link), tone="up", details=details),
+    )
+
+
+def billing_payment_failed(
+    plan: str, amount: str, grace_until: str, link: str, is_test: bool
+) -> RenderedEmail:
+    title = "Your payment did not go through"
+    paras = [
+        *_test_note(is_test),
+        f"We could not charge {amount} for your {plan} plan. Monitoring continues until "
+        f"{grace_until}; we will retry automatically every day.",
+        "You can also retry now from your billing page.",
+    ]
+    return RenderedEmail(
+        _billing_subject("Action needed: payment failed", is_test),
+        _text(title, paras, link),
+        _html(title, paras, ("Retry payment", link), tone="warn"),
+    )
+
+
+def billing_subscription_ended(plan: str, link: str, is_test: bool) -> RenderedEmail:
+    title = "Your subscription has ended"
+    paras = [
+        *_test_note(is_test),
+        f"Your {plan} plan has ended and your monitors are paused. Your data and history "
+        "are kept — choose a plan any time to resume monitoring.",
+    ]
+    return RenderedEmail(
+        _billing_subject("Your Uptivora subscription has ended", is_test),
+        _text(title, paras, link),
+        _html(title, paras, ("Choose a plan", link), tone="down"),
+    )
+
+
+def licence_ready(product: str, link: str, is_test: bool) -> RenderedEmail:
+    title = "Your self-hosted licence is ready"
+    paras = [
+        *_test_note(is_test),
+        f"Your {product} licence file is ready to download from your account.",
+        "Copy it into your installation or upload it in your admin dashboard. The licence "
+        "never expires and is verified offline.",
+    ]
+    return RenderedEmail(
+        _billing_subject("Your Uptivora licence is ready", is_test),
+        _text(title, paras, link),
+        _html(title, paras, ("Download licence", link), tone="up"),
+    )

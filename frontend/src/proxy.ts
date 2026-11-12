@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIES = ["__Host-uptivora_session", "uptivora_session"];
-const APP_PREFIXES = ["/dashboard", "/monitors", "/incidents", "/settings", "/admin"];
+const APP_PREFIXES = ["/dashboard", "/monitors", "/incidents", "/settings", "/billing", "/admin"];
 const MARKETING_ONLY = ["/", "/pricing", "/self-hosted"];
 
 /**
@@ -29,5 +29,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: ["/", "/pricing", "/self-hosted", "/dashboard/:path*", "/monitors/:path*",
-    "/incidents/:path*", "/settings/:path*", "/admin", "/admin/:path*"],
+    "/incidents/:path*", "/settings/:path*", "/billing", "/billing/:path*", "/admin",
+    "/admin/:path*"],
 };

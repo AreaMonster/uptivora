@@ -11,11 +11,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.account.router import router as account_router
+from app.admin import billing as admin_billing
 from app.admin import catalog as admin_catalog
 from app.admin import devtools as admin_devtools
 from app.admin import overview as admin_overview
 from app.admin import users as admin_users
 from app.auth.router import router as auth_router
+from app.billing.router import router as billing_router
 from app.core import eventlog
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
@@ -122,6 +124,8 @@ def create_app() -> FastAPI:
     app.include_router(admin_overview.router)
     app.include_router(admin_users.router)
     app.include_router(admin_catalog.router)
+    app.include_router(admin_billing.router)
+    app.include_router(billing_router)
     if settings.env in admin_devtools.DEV_ENVIRONMENTS:  # never mounted in production
         app.include_router(admin_devtools.router)
     return app

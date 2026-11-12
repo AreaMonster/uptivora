@@ -20,7 +20,7 @@ from app.models import Monitor
 
 log = logging.getLogger("uptivora.housekeeping")
 
-LOCK_IDS = {"rollup": 7101, "retention": 7102, "ssl": 7103}
+LOCK_IDS = {"rollup": 7101, "retention": 7102, "ssl": 7103, "billing": 7104}
 BATCH = 5000
 
 

@@ -6,6 +6,7 @@ import { type ReactNode, Suspense, useEffect, useState } from "react";
 import {
   AlertOctagon,
   BookOpen,
+  CreditCard,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -15,15 +16,23 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Alert, Button, Spinner } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, type PublicConfig } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/format";
 
 const NAV = [
   { href: "/dashboard", label: "Monitors", icon: LayoutDashboard, match: ["/dashboard", "/monitors"] },
   { href: "/incidents", label: "Incidents", icon: AlertOctagon, match: ["/incidents"] },
+  { href: "/billing", label: "Billing", icon: CreditCard, match: ["/billing"], hostedOnly: true },
   { href: "/settings", label: "Settings", icon: Settings, match: ["/settings"] },
 ];
+
+/** Billing exists only where limits come from a per-user plan (hosted edition). */
+function useNav() {
+  const { me } = useAuth();
+  const hosted = me?.limits.scope === "user";
+  return NAV.filter((n) => !("hostedOnly" in n) || hosted);
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -56,9 +65,10 @@ function Gate({ children }: { children: ReactNode }) {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const nav = useNav();
   return (
     <>
-      {NAV.map(({ href, label, icon: Icon, match }) => {
+      {nav.map(({ href, label, icon: Icon, match }) => {
         const active = match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
         return (
           <Link
@@ -81,9 +91,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function StaticNavLinks() {
+  const nav = useNav();
   return (
     <>
-      {NAV.map(({ href, label, icon: Icon }) => (
+      {nav.map(({ href, label, icon: Icon }) => (
         <Link key={href} href={href}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted">
           <Icon className="h-4 w-4" aria-hidden />
@@ -98,6 +109,10 @@ function Frame({ children }: { children: ReactNode }) {
   const { me, logout } = useAuth();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [testMode, setTestMode] = useState(false);
+  useEffect(() => {
+    api<PublicConfig>("/api/public/config").then((c) => setTestMode(c.billing_test_mode), () => {});
+  }, []);
   if (!me) return null;
 
   async function signOut() {
@@ -170,6 +185,11 @@ function Frame({ children }: { children: ReactNode }) {
         </div>
       )}
 
+      {testMode && me.limits.scope === "user" && (
+        <div className="border-b border-warn/30 bg-warn/10 px-4 py-1.5 text-center text-xs font-medium text-[#fde68a]">
+          TEST MODE — payments are simulated. No real money is charged.
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <Banners />
         {children}
