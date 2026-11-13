@@ -23,7 +23,19 @@ Self-hosted: the customer runs everything; Uptivora receives no data at all (ver
 `test_no_phone_home.py`). Only the licence purchase (name, email, billing) is processed by
 the hosted shop.
 
-## Documents to have drafted
+## Drafted documents
+
+Drafts of all documents below are on the website (`/legal`, `/privacy`, `/terms`,
+`/licence-agreement`, `/dpa`), written to match how the software actually behaves. Text:
+`frontend/src/content/legal/pages.tsx`; operator details (name, address, providers):
+`frontend/src/content/legal/operator.ts`. Until `LEGAL_STATUS.reviewed` is set to `true`, every
+page shows a "draft" banner and "For review" notes with the open questions for the lawyer.
+Sign-up and both checkouts link to them (hosted edition only).
+
+To finish: fill in `operator.ts`, have the lawyer review the five pages and answer the review
+notes, then set `reviewed: true` and update `version`.
+
+### What each document covers
 
 1. **Terms of service (hosted)** — plans and limits, monthly billing, upgrade/downgrade and
    cancellation rules as implemented (upgrades prorated immediately, downgrades and
@@ -41,8 +53,8 @@ the hosted shop.
    digital services and downloadable licences; how a refund interacts with an already issued
    licence file (it cannot be revoked offline).
 
-Once they exist, link them in the site footer and in the registration and checkout forms
-(checkboxes or a clear notice, as the lawyer recommends).
+They are linked in the site footer and as a notice at sign-up and checkout; ask the lawyer
+whether a checkbox is preferred instead of the notice.
 
 ## Questions for the fiduciary / accountant
 

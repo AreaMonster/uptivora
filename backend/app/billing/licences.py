@@ -1,18 +1,19 @@
 """Self-hosted licence store (hosted edition).
 
-Flow: customer pays → order ``paid`` → an operator signs the licence OFFLINE with
-``tools/licensegen`` and attaches the file → the server verifies it with the embedded public
-keys before accepting it → order ``fulfilled`` → customer downloads it.
-The signing key never touches this server.
+Flow: customer pays → order ``paid`` → the isolated signing service (``app.signer``) signs the
+licence, or an operator attaches a file signed offline with ``tools/licensegen`` → the server
+verifies it with the embedded public keys before accepting it → order ``fulfilled`` → email
+to the customer, who downloads it. The signing key is never readable by the API or worker.
 """
 
 from __future__ import annotations
 
+import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.billing.providers import Simulation
 from app.billing.service import PaymentDeclined, _charge, _email, ensure_billing
@@ -28,6 +29,8 @@ from app.models import (
     User,
 )
 from app.notifications import templates
+
+log = logging.getLogger("uptivora.licences")
 
 
 async def create_order(
@@ -129,6 +132,94 @@ async def fulfil_order(
         )
     await db.commit()
     return order
+
+
+async def auto_fulfil(db: AsyncSession, settings: Settings, order: LicenseOrder) -> bool:
+    """Have the signing service sign a paid order. False (order stays ``paid``, retried by
+    the worker and visible to admins) if the signer is not configured or unavailable."""
+    from app.billing import signer_client
+
+    if not settings.signer_url or order.status != LicenseOrderStatus.PAID:
+        return False
+    product = await db.get(LicenseProduct, order.product_id)
+    if product is None:
+        return False
+    try:
+        text = await signer_client.request_licence(settings, order, product)
+        await fulfil_order(db, settings, order, text)
+    except (signer_client.SignerError, AppError) as exc:
+        await db.rollback()
+        log.warning("Licence for order %s not signed yet: %s", order.id, exc)
+        return False
+    log.info("Licence for order %s signed and delivered", order.id)
+    return True
+
+
+async def fulfil_pending_orders(maker: async_sessionmaker[AsyncSession], settings: Settings) -> int:
+    """Worker job: retry paid orders whose licence could not be signed right away."""
+    if not settings.signer_url:
+        return 0
+    done = 0
+    async with maker() as db:
+        ids = (
+            await db.scalars(
+                select(LicenseOrder.id).where(
+                    LicenseOrder.status == LicenseOrderStatus.PAID,
+                    LicenseOrder.paid_at < datetime.now(UTC) - timedelta(seconds=30),
+                )
+            )
+        ).all()
+    for order_id in ids:
+        async with maker() as db:
+            order = await db.get(LicenseOrder, order_id)
+            if order is not None and await auto_fulfil(db, settings, order):
+                done += 1
+    return done
+
+
+async def reissue_licences(
+    maker: async_sessionmaker[AsyncSession], settings: Settings, *, from_key_id: str | None = None
+) -> tuple[int, int]:
+    """After a key rotation: re-sign fulfilled orders not signed with the current key and
+    email the new files. Returns (re-issued, failed)."""
+    from app.billing import signer_client
+
+    reissued = failed = 0
+    async with maker() as db:
+        ids = (
+            await db.scalars(
+                select(LicenseOrder.id).where(LicenseOrder.status == LicenseOrderStatus.FULFILLED)
+            )
+        ).all()
+    for order_id in ids:
+        async with maker() as db:
+            order = await db.get(LicenseOrder, order_id)
+            current = signer_client.licence_key_id(order.license_text or "")
+            if current == settings.signer_key_id or (from_key_id and current != from_key_id):
+                continue
+            product = await db.get(LicenseProduct, order.product_id)
+            try:
+                text = await signer_client.request_licence(settings, order, product, reissue=True)
+                lic = verify_license(text, trusted_keys(settings.env, settings.dev_key_dir))
+            except (signer_client.SignerError, LicenseError) as exc:
+                log.warning("Re-issue of order %s failed: %s", order.id, exc)
+                failed += 1
+                continue
+            order.license_id = uuid.UUID(lic.license_id)
+            order.license_text = text.strip() + "\n"
+            user = await db.get(User, order.user_id) if order.user_id else None
+            if user is not None:
+                await _email(
+                    db,
+                    user,
+                    templates.licence_ready(
+                        product.name, f"{settings.public_origin}/billing#licences", order.is_test
+                    ),
+                    f"licence-reissued:{order.id}:{lic.license_id}",
+                )
+            await db.commit()
+            reissued += 1
+    return reissued, failed
 
 
 async def refund_order(db: AsyncSession, order: LicenseOrder) -> LicenseOrder:

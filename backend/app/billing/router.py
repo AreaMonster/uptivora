@@ -301,6 +301,8 @@ async def order_licence(
         product=product.code,
     )
     await db.commit()
+    # Signed within seconds when the signing service runs; otherwise the worker retries.
+    await licences.auto_fulfil(db, settings, order)
     return {"id": str(order.id), "status": order.status}
 
 

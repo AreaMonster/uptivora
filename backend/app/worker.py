@@ -12,6 +12,7 @@ import signal
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
+from app.billing.licences import fulfil_pending_orders
 from app.billing.service import process_due_subscriptions
 from app.core import eventlog, ratelimit
 from app.core.config import get_settings
@@ -127,6 +128,16 @@ async def run() -> None:
                 initial_delay=30,
             )
             if settings.is_hosted
+            else asyncio.sleep(0),
+            # Hosted: paid licence orders the signer could not sign right away.
+            _periodic(
+                "licence-fulfilment",
+                300,
+                locked("licences", lambda: fulfil_pending_orders(maker, settings)),
+                stop,
+                initial_delay=45,
+            )
+            if settings.is_hosted and settings.signer_url
             else asyncio.sleep(0),
             # Self-hosted: apply licence limits, e.g. after a licence file was added or removed.
             _periodic(

@@ -20,7 +20,8 @@ First public release. Release steps: [docs/operations/production-readiness.md](d
   at period end, past-due grace period; billing in TEST MODE until a payment provider is
   connected.
 - Self-hosted: perpetual Ed25519-signed licences verified offline, evaluation mode, team
-  invitations, never contacts Uptivora.
+  invitations, never contacts Uptivora. Licences are signed automatically after payment by an
+  isolated signing service and emailed to the customer.
 
 ### Administration
 - Admin dashboard: overview, users, monitors, plans and pricing, billing and licences,
@@ -33,6 +34,10 @@ First public release. Release steps: [docs/operations/production-readiness.md](d
   nightly zstd backups with weekly restore verification, offline release bundle.
 - Storage: ~3.5 MB per monitor checked every minute, including two weeks of backups.
 - Measured: 10,000 monitors at 60 s on 2 vCPU.
+
+### Legal
+- Legal notice, privacy policy, terms of service, self-hosted licence agreement and data
+  processing agreement, linked at sign-up and checkout.
 
 ### Privacy
 - No analytics, trackers or third-party scripts; one session cookie after sign-in.

@@ -259,8 +259,13 @@ Details: [operations/production-readiness.md](operations/production-readiness.md
 - [x] Incident runbooks, readiness checklist and go-live steps, legal/financial handover,
       CHANGELOG for 1.0.0
 
+- [x] Automatic licence fulfilment: isolated `signer` service (internal network, token, daily
+      limit, journal) signs paid orders; worker retries; `reissue-licences` for key rotation
+- [x] Drafts of legal notice, privacy policy, terms, self-hosted licence agreement and DPA on
+      the website (draft banner until reviewed), linked at sign-up and checkout
+
 Still open, outside the code:
 
-- [ ] Licence key ceremony (offline) and `PRODUCTION_PUBLIC_KEYS`
-- [ ] Terms, privacy policy, DPA, EULA, legal notice; VAT questions; payment provider
+- [ ] Create the shop key and offline master key; add both public keys to `PRODUCTION_PUBLIC_KEYS`
+- [ ] Fill in operator details; lawyer review of the legal pages; VAT questions; payment provider
 - [ ] Release v1.0.0: hosted launch (billing disabled or real provider), self-hosted bundle

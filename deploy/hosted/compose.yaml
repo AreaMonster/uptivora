@@ -32,7 +32,9 @@ x-backend: &backend
     UPTIVORA_STRIPE_WEBHOOK_SECRET_FILE: /run/secrets/stripe_webhook_secret
     UPTIVORA_BILLING_PROVIDER: ${UPTIVORA_BILLING_PROVIDER:-disabled}
     UPTIVORA_TRUSTED_PROXIES: '["${UPTIVORA_SUBNET:-10.250.48.0/24}"]'
-  secrets: [db_password, secret_key, smtp_password, stripe_webhook_secret]
+    UPTIVORA_SIGNER_URL: http://signer:8100
+    UPTIVORA_SIGNER_TOKEN_FILE: /run/secrets/signer_token
+  secrets: [db_password, secret_key, smtp_password, stripe_webhook_secret, signer_token]
 
 services:
   db:
@@ -74,7 +76,7 @@ services:
     environment:
       <<: *backend-env
       WEB_CONCURRENCY: ${UPTIVORA_API_PROCESSES:-4}
-    networks: [edge, data]
+    networks: [edge, data, signing]
     depends_on:
       migrate: { condition: service_completed_successfully }
     healthcheck:
@@ -87,12 +89,36 @@ services:
   worker:
     <<: *backend
     command: ["python", "-m", "app.worker"]
-    networks: [edge, data]
+    networks: [edge, data, signing]
     deploy:
       replicas: ${UPTIVORA_WORKERS:-2}
     depends_on:
       migrate: { condition: service_completed_successfully }
     stop_grace_period: 30s
+
+  # Licence signing (docs/LICENSE_KEY_OPERATIONS.md). The only service that can read the shop
+  # signing key; reachable solely from api and worker over the internal "signing" network.
+  signer:
+    <<: *hardening
+    image: ${UPTIVORA_IMAGE_PREFIX:-uptivora}/api:${UPTIVORA_VERSION}
+    command: ["python", "-m", "app.signer", "serve"]
+    environment:
+      UPTIVORA_ENV: production
+      UPTIVORA_EDITION: hosted
+      UPTIVORA_PUBLIC_URL: ${UPTIVORA_PUBLIC_URL:-https://${UPTIVORA_DOMAIN}}
+      UPTIVORA_SECRET_KEY_FILE: /run/secrets/secret_key
+      UPTIVORA_SIGNER_TOKEN_FILE: /run/secrets/signer_token
+      UPTIVORA_SIGNER_KEY_ID: ${UPTIVORA_SIGNER_KEY_ID:-}
+      UPTIVORA_SIGNER_DAILY_LIMIT: ${UPTIVORA_SIGNER_DAILY_LIMIT:-25}
+    secrets: [secret_key, signer_token, licence_signing_key]
+    volumes:
+      - signer_data:/data
+    networks: [signing]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8100/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   web:
     <<: *hardening
@@ -152,9 +178,13 @@ networks:
         - subnet: ${UPTIVORA_SUBNET:-10.250.48.0/24}
   data:
     internal: true
+  # API/worker <-> signer only; no route anywhere else.
+  signing:
+    internal: true
 
 volumes:
   pgdata:
+  signer_data:
   caddy_data:
   caddy_config:
 
@@ -163,3 +193,5 @@ secrets:
   secret_key: { file: ./secrets/secret_key }
   smtp_password: { file: ./secrets/smtp_password }
   stripe_webhook_secret: { file: ./secrets/stripe_webhook_secret }
+  signer_token: { file: ./secrets/signer_token }
+  licence_signing_key: { file: ./secrets/licence_signing_key }

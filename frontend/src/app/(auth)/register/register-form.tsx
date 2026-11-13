@@ -103,9 +103,18 @@ export function RegisterForm() {
           <Button type="submit" className="w-full" loading={busy}>
             {setupMode ? "Create administrator account" : "Create account"}
           </Button>
-          <p className="text-center text-xs text-fg-subtle">
-            We only use your email for your account and alerts. No tracking, no newsletters.
-          </p>
+          {config.edition === "hosted" ? (
+            <p className="text-xs leading-relaxed text-fg-subtle">
+              By creating an account you accept the{" "}
+              <Link href="/terms" className="link" target="_blank">terms of service</Link> and
+              acknowledge the <Link href="/privacy" className="link" target="_blank">privacy policy</Link>.
+              We use your email only for your account and alerts.
+            </p>
+          ) : (
+            <p className="text-xs text-fg-subtle">
+              Your email is used only for your account and alerts.
+            </p>
+          )}
         </form>
       )}
     </AuthCard>

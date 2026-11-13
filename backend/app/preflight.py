@@ -141,6 +141,17 @@ async def run_checks(settings: Settings, *, smtp: bool = False) -> list[Result]:
                 else settings.billing_provider,
             )
         )
+        from app.billing.signer_client import health as signer_health
+
+        signer = await signer_health(settings)
+        add(
+            signer == "ok",
+            "Licence signer",
+            f"ready ({settings.signer_key_id})",
+            f"{signer}: self-hosted licences are not signed automatically "
+            "(docs/LICENSE_KEY_OPERATIONS.md)",
+            fail=False,
+        )
         add(
             bool(settings.network_canaries),
             "Alert-storm guard",

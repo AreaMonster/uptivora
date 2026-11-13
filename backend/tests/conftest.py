@@ -122,7 +122,7 @@ async def client(migrated_db_url: str):
 
 
 @pytest.fixture
-def make_client(migrated_db_url: str):
+async def make_client(migrated_db_url: str):
     """Factory for additional independent browser-like clients (separate cookie jars)."""
     import httpx
 
@@ -137,7 +137,7 @@ def make_client(migrated_db_url: str):
 
     yield factory
     for c in clients:
-        asyncio.get_event_loop().create_task(c.aclose())
+        await c.aclose()
 
 
 def unique_email(prefix: str = "user") -> str:

@@ -2,6 +2,7 @@
 
   python -m app.cli migrate
   python -m app.cli preflight [--smtp]
+  python -m app.cli reissue-licences [--from-key-id OLD]
   python -m app.cli create-user --email a@b.ch --password '...' [--admin] [--plan pro]
 
 ``--plan`` creates a TEST-MODE subscription (no payment) and is refused in production.
@@ -93,6 +94,23 @@ def cmd_preflight(args: argparse.Namespace) -> None:
         raise SystemExit(1)
 
 
+def cmd_reissue(args: argparse.Namespace) -> None:
+    from app.billing.licences import reissue_licences
+
+    async def run() -> tuple[int, int]:
+        try:
+            return await reissue_licences(
+                get_sessionmaker(), get_settings(), from_key_id=args.from_key_id
+            )
+        finally:
+            await get_engine().dispose()
+
+    done, failed = asyncio.run(run())
+    print(f"Re-issued {done} licence(s); {failed} failed (see the log).")
+    if failed:
+        raise SystemExit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="uptivora")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -100,6 +118,12 @@ def main(argv: list[str] | None = None) -> None:
     pf = sub.add_parser("preflight", help="check that this installation is ready for production")
     pf.add_argument("--smtp", action="store_true", help="also log in to the SMTP server")
     pf.set_defaults(func=cmd_preflight)
+    ri = sub.add_parser(
+        "reissue-licences",
+        help="after a signing-key rotation: re-sign and email every sold licence",
+    )
+    ri.add_argument("--from-key-id", help="only licences signed with this key id")
+    ri.set_defaults(func=cmd_reissue)
     p = sub.add_parser("create-user", help="create a user account")
     p.add_argument("--email", required=True)
     p.add_argument("--password")

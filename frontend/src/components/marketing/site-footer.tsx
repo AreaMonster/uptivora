@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LEGAL_PAGES } from "@/components/legal/legal-page";
 import { Logo } from "@/components/logo";
 
 const LINKS = [
@@ -31,9 +32,15 @@ export function SiteFooter() {
           ))}
         </ul>
       </div>
-      <div className="container-page flex flex-col gap-1 border-t border-line py-4 font-mono text-[11px] text-fg-subtle sm:flex-row sm:justify-between">
-        <span>© Uptivora</span>
-        <span>Prices in Swiss francs (CHF)</span>
+      <div className="container-page flex flex-col gap-3 border-t border-line py-4 text-[12px] text-fg-subtle sm:flex-row sm:items-center sm:justify-between">
+        <span className="font-mono text-[11px]">© Uptivora · prices in Swiss francs (CHF)</span>
+        <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
+          {LEGAL_PAGES.map((p) => (
+            <Link key={p.href} href={p.href} className="hover:text-fg">
+              {p.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </footer>
   );

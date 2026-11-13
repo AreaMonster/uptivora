@@ -284,6 +284,9 @@ export function BillingView() {
               </p>
             )}
             {data.test_mode && checkout.quote.action !== "downgrade" && <TestCardPicker value={simulate} onChange={setSimulate} />}
+            <p className="text-xs text-fg-subtle">
+              Subject to the <a href="/terms" target="_blank" className="link">terms of service</a>.
+            </p>
           </div>
         )}
       </ConfirmDialog>
@@ -323,8 +326,13 @@ function LicenceStore({ data, testMode, onChanged }: { data: BillingSummary; tes
     setBusy(true);
     setMsg(null);
     try {
-      await api("/api/billing/licence-orders", { method: "POST", body: { product_code: product.code, licensee_name: name, licensee_email: email, simulate } });
-      setMsg({ tone: "success", text: "Thank you! Your licence file is being prepared — we’ll email you when it is ready to download." });
+      const order = await api<{ status: string }>("/api/billing/licence-orders", { method: "POST", body: { product_code: product.code, licensee_name: name, licensee_email: email, simulate } });
+      setMsg({
+        tone: "success",
+        text: order.status === "fulfilled"
+          ? "Thank you! Your licence is ready — download it below. We also sent you an email."
+          : "Thank you! Your licence file is being prepared — we’ll email you when it is ready to download.",
+      });
       setProduct(null);
       await onChanged();
     } catch (err) {
@@ -395,6 +403,9 @@ function LicenceStore({ data, testMode, onChanged }: { data: BillingSummary; tes
         </div>
         {testMode && <TestCardPicker value={simulate} onChange={setSimulate} />}
         {testMode && <p className="mt-2 flex items-center gap-1.5 text-xs text-fg-subtle"><FlaskConical className="h-3.5 w-3.5" /> Test orders are fulfilled with test licences.</p>}
+        <p className="mt-3 text-xs text-fg-subtle">
+          By buying you accept the <a href="/licence-agreement" target="_blank" className="link">self-hosted licence agreement</a>.
+        </p>
       </ConfirmDialog>
     </section>
   );

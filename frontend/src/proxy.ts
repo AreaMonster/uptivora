@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIES = ["__Host-uptivora_session", "uptivora_session"];
 const APP_PREFIXES = ["/dashboard", "/monitors", "/incidents", "/settings", "/billing", "/admin"];
-const MARKETING_ONLY = ["/", "/pricing", "/self-hosted"];
+// Marketing and the operator's legal pages exist only on the hosted site, not in a customer's
+// self-hosted installation.
+const MARKETING_ONLY = ["/", "/pricing", "/self-hosted", "/legal", "/privacy", "/terms",
+  "/licence-agreement", "/dpa"];
 
 /**
  * Runs at request time:
@@ -28,7 +31,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/pricing", "/self-hosted", "/dashboard/:path*", "/monitors/:path*",
+  matcher: ["/", "/pricing", "/self-hosted", "/legal", "/privacy", "/terms", "/licence-agreement",
+    "/dpa", "/dashboard/:path*", "/monitors/:path*",
     "/incidents/:path*", "/settings/:path*", "/billing", "/billing/:path*", "/admin",
     "/admin/:path*"],
 };

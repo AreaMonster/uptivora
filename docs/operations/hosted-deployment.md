@@ -37,6 +37,13 @@ docker compose run --rm api python -m app.cli create-user --email ops@uptivora.c
 
 The command prompts for the password. Then sign in and check Admin → System.
 
+## Licence signing
+
+The `signer` service signs self-hosted licences automatically after payment. It needs the
+shop key once — setup, rotation and incident steps in
+[../LICENSE_KEY_OPERATIONS.md](../LICENSE_KEY_OPERATIONS.md). Without a key it reports
+`no_key` and paid orders wait in Admin → Billing & licences for a manually signed file.
+
 ## Billing
 
 `UPTIVORA_BILLING_PROVIDER=disabled` (default) hides upgrades; plans can be assigned by an

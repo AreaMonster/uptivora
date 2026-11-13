@@ -83,6 +83,15 @@ class Settings(BaseSettings):
     allow_test_billing_in_production: bool = False
     stripe_webhook_secret: SecretStr = Field(default=SecretStr(""))  # future real provider
 
+    # Licence signing service (hosted edition, see app.signer). The API and worker know only
+    # the URL and a shared token; the private key is mounted into the signer container alone.
+    signer_url: str = ""  # e.g. http://signer:8100; empty = licences are attached manually
+    signer_token: SecretStr = Field(default=SecretStr(""))
+    signer_key_path: Path = Path("/run/secrets/licence_signing_key")
+    signer_key_id: str = ""
+    signer_daily_limit: int = Field(default=25, ge=1, le=10000)
+    signer_data_dir: Path = Path("/data")
+
     # Licensing (self-hosted edition)
     license_path: Path | None = None
     dev_key_dir: Path = Path(__file__).resolve().parents[2] / ".dev-keys"
@@ -147,6 +156,9 @@ class Settings(BaseSettings):
                 )
             if not self.secret_key.get_secret_value():
                 self.secret_key = SecretStr("insecure-development-secret-key-not-for-production")
+
+        if self.signer_url and len(self.signer_token.get_secret_value()) < 32:
+            raise ValueError("UPTIVORA_SIGNER_TOKEN must be set (32+ characters) with SIGNER_URL")
 
         if self.heartbeat_url:
             hb = urlsplit(self.heartbeat_url)

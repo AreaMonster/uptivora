@@ -28,7 +28,8 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
 # Byte-compile once at build time: the container filesystem is read-only at runtime.
-RUN python -m compileall -q /app/app /app/alembic
+# /data: the licence signer's journal volume (new volumes inherit this ownership).
+RUN python -m compileall -q /app/app /app/alembic  && mkdir -p /data && chown 10001:10001 /data
 USER 10001:10001
 EXPOSE 8000
 # uvicorn must not rewrite the client address from X-Forwarded-For: the app does that
