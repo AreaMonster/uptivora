@@ -75,12 +75,12 @@ export function MonitorsView() {
           <input className="input pl-9" placeholder="Search URL, name or owner email" value={input}
             onChange={(e) => setInput(e.target.value)} />
         </label>
-        <div className="inline-flex flex-wrap rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+        <div className="inline-flex flex-wrap rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
           {FILTERS.map((f) => (
             <button key={f.key} type="button" role="tab" aria-selected={status === f.key}
               onClick={() => { setStatus(f.key); setPage(1); }}
-              className={cn("rounded-md px-3 py-1.5 text-sm font-medium",
-                status === f.key ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+              className={cn("rounded-[3px] px-3 py-1.5 text-sm font-medium",
+                status === f.key ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
               {f.label}
             </button>
           ))}

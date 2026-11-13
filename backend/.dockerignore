@@ -1,0 +1,16 @@
+# Only app/, alembic/, alembic.ini, pyproject.toml and constraints.txt belong in the image.
+**/__pycache__
+**/*.pyc
+.venv
+.pytest_cache
+.ruff_cache
+*.egg-info
+tests
+.env
+.env.*
+.dev-keys
+**/*.pem
+**/*.key
+**/*.uptivora-license
+# Development-only helper that creates demo accounts with known passwords.
+app/devseed.py

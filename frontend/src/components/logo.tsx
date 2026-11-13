@@ -1,27 +1,21 @@
 import Link from "next/link";
 import { cn } from "@/lib/format";
 
+/** The mark is a status light: the one thing Uptivora tells you. */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={cn("h-7 w-7", className)}>
-      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0F1726" stroke="#2F3D57" />
-      <path
-        d="M5 17h5.2l2.3-6 4.2 12 3-8.5 1.8 2.5H27"
-        fill="none"
-        stroke="#2DD4BF"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 16 16" aria-hidden="true" className={cn("h-3.5 w-3.5", className)}>
+      <circle cx="8" cy="8" r="7" className="fill-up" />
+      <circle cx="8" cy="8" r="2.6" className="fill-canvas" />
     </svg>
   );
 }
 
 export function Logo({ href = "/", className }: { href?: string; className?: string }) {
   return (
-    <Link href={href} className={cn("inline-flex items-center gap-2.5", className)}>
+    <Link href={href} className={cn("inline-flex items-center gap-2", className)}>
       <LogoMark />
-      <span className="text-[15px] font-semibold tracking-[0.18em] text-fg">UPTIVORA</span>
+      <span className="text-[17px] font-semibold tracking-[-0.02em] text-fg">uptivora</span>
     </Link>
   );
 }

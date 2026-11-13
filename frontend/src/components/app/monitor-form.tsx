@@ -110,7 +110,7 @@ export function MonitorForm({ monitor }: { monitor?: Monitor }) {
           hint="Public http(s) address. Private networks and localhost are not allowed." />
       </div>
 
-      <div className="divide-y divide-line rounded-xl border border-line bg-ink-850 px-4">
+      <div className="divide-y divide-line rounded-[3px] border border-line bg-sunken px-4">
         <Toggle label="Email alerts for this monitor" checked={v.notifications_enabled}
           onChange={(x) => set("notifications_enabled", x)}
           description="Outage and recovery emails, according to your notification settings." />
@@ -151,7 +151,7 @@ export function MonitorForm({ monitor }: { monitor?: Monitor }) {
             <TextField label="SSL warning (days before expiry)" type="number" min={1} max={90}
               value={v.ssl_warning_days} error={fields.ssl_warning_days}
               onChange={(e) => set("ssl_warning_days", Number(e.target.value))} />
-            <div className="divide-y divide-line rounded-xl border border-line bg-ink-850 px-4 sm:col-span-2">
+            <div className="divide-y divide-line rounded-[3px] border border-line bg-sunken px-4 sm:col-span-2">
               <Toggle label="Follow redirects" checked={v.follow_redirects}
                 onChange={(x) => set("follow_redirects", x)}
                 description="Up to 5 hops; each target is security-checked." />

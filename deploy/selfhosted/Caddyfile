@@ -1,0 +1,42 @@
+# Uptivora reverse proxy: HTTPS termination, /api -> api, everything else -> web.
+# Configured through environment variables set in compose.yaml / .env:
+#   UPTIVORA_SITE_ADDRESS  usually your domain, e.g. monitor.example.com
+#   UPTIVORA_TLS           auto     = certificate from Let's Encrypt / ZeroSSL (public DNS + ports 80/443)
+#                          internal = certificate from Caddy's own local CA (intranet installations)
+{
+	# No admin API: configuration only changes by editing this file and restarting.
+	admin off
+	# With UPTIVORA_TLS=internal, do not try to add Caddy's CA to the container's trust store.
+	skip_install_trust
+}
+
+(tls-auto) {
+}
+
+(tls-internal) {
+	tls internal
+}
+
+{$UPTIVORA_SITE_ADDRESS} {
+	import tls-{$UPTIVORA_TLS:auto}
+
+	encode zstd gzip
+
+	request_body {
+		max_size 2MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+		-Via
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

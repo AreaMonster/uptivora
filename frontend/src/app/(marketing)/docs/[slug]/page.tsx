@@ -16,7 +16,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
   if (!doc) notFound();
   return (
     <article className="max-w-3xl">
-      <h1 className="text-3xl font-semibold tracking-tight">{doc.title}</h1>
+      <h1 className="text-[32px] font-semibold tracking-[-0.02em]">{doc.title}</h1>
       <p className="mt-2 text-fg-muted">{doc.summary}</p>
       <div className="prose-uv mt-8">{doc.body}</div>
     </article>

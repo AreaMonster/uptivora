@@ -18,13 +18,14 @@ import { cn } from "@/lib/format";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variants: Record<Variant, string> = {
-  primary:
-    "bg-up text-ink-950 hover:bg-[#34d39e] shadow-[0_0_0_1px_#10b98166,0_8px_24px_-8px_#10b98199]",
-  secondary: "border border-line-strong bg-ink-750 text-fg hover:bg-ink-700",
-  ghost: "text-fg-muted hover:bg-ink-750 hover:text-fg",
-  danger: "border border-down/40 bg-down-soft text-[#fda4af] hover:bg-down/25",
+  primary: "bg-primary text-on-primary hover:bg-primary/85",
+  secondary: "border border-line-strong bg-surface text-fg hover:border-fg-subtle hover:bg-hover",
+  ghost: "text-fg-muted hover:bg-hover hover:text-fg",
+  danger: "bg-down text-canvas hover:bg-down-ink",
 };
-const sizes = { sm: "h-8 px-3 text-sm", md: "h-10 px-4 text-sm", lg: "h-12 px-6 text-base" };
+const sizes = { sm: "h-8 px-3 text-[13px]", md: "h-9 px-3.5 text-sm", lg: "h-11 px-5 text-[15px]" };
+const base =
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[3px] font-medium transition-colors";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
@@ -46,7 +47,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors",
+        base,
         "disabled:cursor-not-allowed disabled:opacity-55",
         variants[variant],
         sizes[size],
@@ -76,7 +77,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors",
+        base,
         variants[variant],
         sizes[size],
         className,
@@ -111,7 +112,7 @@ export function Field({
       </label>
       {children}
       {error ? (
-        <p className="mt-1.5 text-xs text-[#fda4af]" role="alert">
+        <p className="mt-1.5 text-xs text-down-ink" role="alert">
           {error}
         </p>
       ) : hint ? (
@@ -159,7 +160,7 @@ export function SelectField({ label, hint, error, className, id, children, ...re
         className={cn("input appearance-none bg-[length:16px] pr-9", error && "input-error")}
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2393a3bb' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8678' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "right 0.7rem center",
         }}
@@ -205,15 +206,15 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
-          checked ? "bg-up" : "bg-ink-700 ring-1 ring-line-strong",
+          "relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-[3px] border transition-colors",
+          checked ? "border-up bg-up" : "border-line-strong bg-sunken",
           disabled && "opacity-50",
         )}
       >
         <span
           className={cn(
-            "inline-block h-4.5 w-4.5 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-[22px]" : "translate-x-[4px]",
+            "inline-block h-3.5 w-3.5 rounded-[2px] transition-transform",
+            checked ? "translate-x-[17px] bg-white" : "translate-x-[2px] bg-fg-subtle",
           )}
         />
       </button>
@@ -224,10 +225,10 @@ export function Toggle({
 // --- Feedback --------------------------------------------------------------------------------
 
 const alertStyles = {
-  info: ["border-accent/30 bg-accent/10 text-[#99f6e4]", Info],
-  success: ["border-up/30 bg-up-soft text-[#a7f3d0]", CheckCircle2],
-  warning: ["border-warn/30 bg-warn-soft text-[#fde68a]", AlertTriangle],
-  error: ["border-down/30 bg-down-soft text-[#fecdd3]", XCircle],
+  info: ["border-accent bg-accent-soft", Info, "text-accent"],
+  success: ["border-up bg-up-soft", CheckCircle2, "text-up"],
+  warning: ["border-warn bg-warn-soft", AlertTriangle, "text-warn"],
+  error: ["border-down bg-down-soft", XCircle, "text-down"],
 } as const;
 
 export function Alert({
@@ -243,16 +244,16 @@ export function Alert({
   action?: ReactNode;
   className?: string;
 }) {
-  const [style, Icon] = alertStyles[tone];
+  const [style, Icon, iconColor] = alertStyles[tone];
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={cn("flex gap-3 rounded-xl border px-4 py-3 text-sm", style, className)}
+      className={cn("flex gap-3 border-l-[3px] px-4 py-3 text-sm text-fg", style, className)}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconColor)} aria-hidden />
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}
-        {children && <div className={cn(title && "mt-0.5", "opacity-90")}>{children}</div>}
+        {children && <div className={cn(title && "mt-0.5", "text-fg-muted")}>{children}</div>}
       </div>
       {action && <div className="shrink-0 self-center">{action}</div>}
     </div>
@@ -264,38 +265,24 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-ink-700/70", className)} />;
+  return <div className={cn("animate-pulse rounded-[3px] bg-muted", className)} />;
 }
 
 // --- Status ----------------------------------------------------------------------------------
 
-const statusMeta: Record<MonitorStatus, { label: string; dot: string; pill: string }> = {
-  up: { label: "Up", dot: "text-up bg-up", pill: "bg-up-soft text-[#6ee7b7] ring-up/30" },
-  down: { label: "Down", dot: "text-down bg-down", pill: "bg-down-soft text-[#fda4af] ring-down/30" },
-  pending: {
-    label: "Pending",
-    dot: "text-accent bg-accent",
-    pill: "bg-accent/10 text-[#99f6e4] ring-accent/30",
-  },
-  paused: {
-    label: "Paused",
-    dot: "text-paused bg-paused",
-    pill: "bg-ink-700 text-fg-muted ring-line-strong",
-  },
+const statusMeta: Record<MonitorStatus, { label: string; dot: string; text: string }> = {
+  up: { label: "Up", dot: "bg-up", text: "text-up-ink" },
+  down: { label: "Down", dot: "bg-down status-blink", text: "text-down-ink" },
+  pending: { label: "Pending", dot: "border-[1.5px] border-accent", text: "text-accent-ink" },
+  paused: { label: "Paused", dot: "border-[1.5px] border-paused", text: "text-fg-subtle" },
 };
 
 export function StatusDot({ status, className }: { status: MonitorStatus; className?: string }) {
-  const meta = statusMeta[status];
   return (
-    <span className={cn("relative inline-flex h-2.5 w-2.5", className)} aria-hidden>
-      <span
-        className={cn(
-          "relative inline-flex h-2.5 w-2.5 rounded-full",
-          meta.dot,
-          (status === "up" || status === "down") && "status-pulse",
-        )}
-      />
-    </span>
+    <span
+      className={cn("inline-block h-2 w-2 shrink-0 rounded-full", statusMeta[status].dot, className)}
+      aria-hidden
+    />
   );
 }
 
@@ -304,11 +291,11 @@ export function StatusPill({ status }: { status: MonitorStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-        meta.pill,
+        "inline-flex items-center gap-1.5 font-mono text-xs font-medium uppercase tracking-wide",
+        meta.text,
       )}
     >
-      <StatusDot status={status} className="scale-75" />
+      <StatusDot status={status} />
       {meta.label}
     </span>
   );
@@ -322,16 +309,16 @@ export function Badge({
   tone?: "neutral" | "accent" | "warn" | "down" | "up";
 }) {
   const tones = {
-    neutral: "bg-ink-700 text-fg-muted ring-line-strong",
-    accent: "bg-accent/10 text-[#99f6e4] ring-accent/30",
-    warn: "bg-warn-soft text-[#fde68a] ring-warn/30",
-    down: "bg-down-soft text-[#fda4af] ring-down/30",
-    up: "bg-up-soft text-[#6ee7b7] ring-up/30",
+    neutral: "border-line-strong text-fg-muted",
+    accent: "border-accent/50 text-accent-ink",
+    warn: "border-warn/60 text-warn-ink",
+    down: "border-down/60 text-down-ink",
+    up: "border-up/50 text-up-ink",
   };
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1",
+        "inline-flex items-center rounded-[2px] border px-1.5 py-px font-mono text-[10.5px] font-medium uppercase leading-4 tracking-wide",
         tones[tone],
       )}
     >
@@ -352,9 +339,9 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-6 flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
+        <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.01em] text-fg">{title}</h1>
         {description && <div className="mt-1 text-sm text-fg-muted">{description}</div>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
@@ -374,14 +361,10 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="card flex flex-col items-center px-6 py-14 text-center">
-      {icon && (
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-xl bg-ink-700 text-accent ring-1 ring-line-strong">
-          {icon}
-        </div>
-      )}
+    <div className="rounded-[var(--radius-card)] border border-dashed border-line-strong px-6 py-12 sm:px-10">
+      {icon && <div className="mb-3 text-fg-subtle [&_svg]:h-5 [&_svg]:w-5">{icon}</div>}
       <h2 className="text-lg font-semibold">{title}</h2>
-      {children && <div className="mt-2 max-w-md text-sm text-fg-muted">{children}</div>}
+      {children && <div className="mt-1.5 max-w-lg text-sm text-fg-muted">{children}</div>}
       {action && <div className="mt-6">{action}</div>}
     </div>
   );
@@ -422,7 +405,7 @@ export function ConfirmDialog({
         e.preventDefault();
         onCancel();
       }}
-      className="m-auto w-[min(440px,calc(100vw-32px))] rounded-2xl border border-line bg-ink-800 p-0 text-fg shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      className="m-auto w-[min(440px,calc(100vw-32px))] rounded-[var(--radius-card)] border border-line-strong bg-surface p-0 text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.35)] backdrop:bg-black/40"
     >
       <div className="p-6">
         <h2 className="text-lg font-semibold">{title}</h2>

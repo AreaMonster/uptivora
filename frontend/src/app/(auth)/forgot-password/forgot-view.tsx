@@ -30,7 +30,7 @@ export function ForgotPasswordPage() {
     <AuthCard
       title="Reset your password"
       subtitle="Enter your account email and we’ll send you a reset link."
-      footer={<Link href="/login" className="text-accent hover:underline">Back to sign in</Link>}
+      footer={<Link href="/login" className="link">Back to sign in</Link>}
     >
       {done ? (
         <Alert tone="success" title="Check your inbox">

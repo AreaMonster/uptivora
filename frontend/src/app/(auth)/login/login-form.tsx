@@ -32,11 +32,11 @@ export function LoginForm() {
   return (
     <AuthCard
       title="Sign in to Uptivora"
-      subtitle="Welcome back. Enter your details to continue."
+      subtitle="With the email address you registered."
       footer={
         <>
           New here?{" "}
-          <Link href="/register" className="font-medium text-accent hover:underline">
+          <Link href="/register" className="link">
             Create an account
           </Link>
         </>

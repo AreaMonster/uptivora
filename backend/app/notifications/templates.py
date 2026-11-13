@@ -27,7 +27,7 @@ class Footer:
     reason: str = "You receive this email because of your Uptivora account."
 
 
-ACCENT = {"down": "#F43F5E", "up": "#10B981", "warn": "#F59E0B", "info": "#14B8A6"}
+ACCENT = {"down": "#C9361F", "up": "#1F7A48", "warn": "#B07418", "info": "#2945C4"}
 
 
 def _clean_subject(subject: str) -> str:
@@ -49,7 +49,7 @@ def _html(
     )
     if details:
         rows = "".join(
-            f'<tr><td style="padding:6px 12px 6px 0;color:#64748B;white-space:nowrap;'
+            f'<tr><td style="padding:6px 12px 6px 0;color:#8A8678;white-space:nowrap;'
             f'vertical-align:top">{escape(k)}</td>'
             f'<td style="padding:6px 0;word-break:break-word">{escape(v)}</td></tr>'
             for k, v in details
@@ -62,20 +62,20 @@ def _html(
         label, url = button
         body += (
             f'<p style="margin:22px 0"><a href="{escape(url, quote=True)}" '
-            'style="background:#10B981;color:#04140D;text-decoration:none;font-weight:600;'
-            f'padding:12px 20px;border-radius:8px;display:inline-block">{escape(label)}</a></p>'
-            '<p style="margin:0 0 6px;font-size:12px;color:#64748B">Or open this link: '
+            'style="background:#1A1915;color:#F7F6F2;text-decoration:none;font-weight:600;'
+            f'padding:11px 18px;border-radius:3px;display:inline-block">{escape(label)}</a></p>'
+            '<p style="margin:0 0 6px;font-size:12px;color:#8A8678">Or open this link: '
             f"{escape(url)}</p>"
         )
     links = []
     if footer.manage_url:
         links.append(
-            f'<a href="{escape(footer.manage_url, quote=True)}" style="color:#475569">'
+            f'<a href="{escape(footer.manage_url, quote=True)}" style="color:#5A574D">'
             "Notification settings</a>"
         )
     if footer.unsubscribe_url:
         links.append(
-            f'<a href="{escape(footer.unsubscribe_url, quote=True)}" style="color:#475569">'
+            f'<a href="{escape(footer.unsubscribe_url, quote=True)}" style="color:#5A574D">'
             "Unsubscribe</a>"
         )
     link_html = " · ".join(links)
@@ -83,16 +83,17 @@ def _html(
     return (
         '<!doctype html><html><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width"></head>'
-        '<body style="margin:0;background:#F1F5F9;'
-        'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0F172A">'
+        '<body style="margin:0;background:#F3F2ED;'
+        'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1A1915">'
         '<div style="max-width:560px;margin:0 auto;padding:28px 16px">'
-        '<div style="font-weight:700;letter-spacing:.14em;color:#0B1220;margin-bottom:14px;'
-        'font-size:13px">UPTIVORA</div>'
-        f'<div style="background:#fff;border-radius:12px;border-top:4px solid {accent};'
+        '<div style="font-weight:600;color:#1A1915;margin-bottom:14px;font-size:15px">'
+        '<span style="color:#1F7A48">&#9679;</span> uptivora</div>'
+        f'<div style="background:#FBFAF7;border:1px solid #D9D6CC;border-radius:4px;'
+        f'border-top:3px solid {accent};'
         'padding:26px">'
         f'<h1 style="font-size:20px;line-height:1.3;margin:0 0 14px">{escape(title)}</h1>'
         f"{body}</div>"
-        '<p style="font-size:12px;color:#64748B;margin:16px 4px 0;line-height:1.5">'
+        '<p style="font-size:12px;color:#8A8678;margin:16px 4px 0;line-height:1.5">'
         f"{escape(footer.reason)}"
         f"{'<br>' + link_html if link_html else ''}</p></div></body></html>"
     )
@@ -220,7 +221,7 @@ def monitor_down(
     paras = [f"Uptivora cannot reach {url}. We will email you again as soon as it recovers."]
     details = [("Monitor", name), ("URL", url), ("Cause", cause), ("Down since", started)]
     return RenderedEmail(
-        _clean_subject(f"🔴 DOWN: {name}"),
+        _clean_subject(f"DOWN: {name}"),
         _text(title, paras, link, footer=footer, details=details),
         _html(title, paras, ("View monitor", link), footer=footer, tone="down", details=details),
         _unsubscribe_headers(footer),
@@ -245,7 +246,7 @@ def monitor_up(
     if cause:
         details.append(("Cause", cause))
     return RenderedEmail(
-        _clean_subject(f"🟢 RECOVERED: {name} (down {fmt_duration(duration_seconds)})"),
+        _clean_subject(f"RECOVERED: {name} (down {fmt_duration(duration_seconds)})"),
         _text(title, paras, link, footer=footer, details=details),
         _html(title, paras, ("View incident", link), footer=footer, tone="up", details=details),
         _unsubscribe_headers(footer),
@@ -257,11 +258,11 @@ def ssl_expiring(
 ) -> RenderedEmail:
     if days < 0:
         title = f"The SSL certificate of {name} has expired"
-        subject = f"⚠️ SSL certificate EXPIRED: {name}"
+        subject = f"SSL certificate EXPIRED: {name}"
         lead = "Visitors now see security warnings. Renew the certificate as soon as possible."
     else:
         title = f"The SSL certificate of {name} expires in {days} days"
-        subject = f"⚠️ SSL certificate expires in {days} days: {name}"
+        subject = f"SSL certificate expires in {days} days: {name}"
         lead = "Renew the certificate (or check your automatic renewal) to avoid an outage."
     details = [("Monitor", name), ("URL", url), ("Expires", expires)]
     return RenderedEmail(

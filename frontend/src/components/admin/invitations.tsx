@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { MailPlus, RotateCw, Trash2 } from "lucide-react";
+import { RotateCw, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, SelectField, TextField } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
@@ -57,7 +57,7 @@ export function Invitations({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <section className="card mb-6 p-5">
-      <h2 className="flex items-center gap-2 font-semibold"><MailPlus className="h-4 w-4 text-accent" /> Invite a colleague</h2>
+      <h2 className="font-semibold">Invite a colleague</h2>
       <p className="mt-1 text-sm text-fg-muted">They receive an email to choose a password. Invited accounts count towards your licence’s user limit.</p>
       {msg && <Alert tone={msg.tone} className="mt-4">{msg.text}</Alert>}
       <form onSubmit={invite} className="mt-4 grid gap-3 sm:grid-cols-[1fr_160px_auto] sm:items-start">
@@ -70,7 +70,7 @@ export function Invitations({ onChanged }: { onChanged?: () => void }) {
         <Button type="submit" className="sm:mt-[26px]" loading={busy === "invite"} disabled={!email}>Send invitation</Button>
       </form>
       {data && data.length > 0 && (
-        <ul className="mt-5 divide-y divide-line rounded-xl border border-line">
+        <ul className="mt-5 divide-y divide-line rounded-[3px] border border-line">
           {data.map((inv) => (
             <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
               <div className="min-w-0">
@@ -112,7 +112,7 @@ export function SetupChecklist() {
       <ol className="mt-4 space-y-2">
         {data.steps.map((s) => (
           <li key={s.key} className="flex items-center gap-3 text-sm">
-            <span className={s.done ? "grid h-5 w-5 place-items-center rounded-full bg-up text-[11px] font-bold text-ink-950" : "h-5 w-5 rounded-full border border-line-strong"}>
+            <span className={s.done ? "grid h-5 w-5 place-items-center rounded-full bg-up text-[11px] font-bold text-canvas" : "h-5 w-5 rounded-full border border-line-strong"}>
               {s.done ? "✓" : ""}
             </span>
             <span className={s.done ? "text-fg-subtle line-through" : ""}>{s.label}</span>

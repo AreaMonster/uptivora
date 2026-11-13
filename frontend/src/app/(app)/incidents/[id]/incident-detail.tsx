@@ -39,7 +39,7 @@ function buildTimeline(d: IncidentDetail): Event[] {
     events.push({
       at: n.sent_at ?? n.created_at,
       icon: <BellRing className="h-4 w-4" />,
-      tone: "text-accent bg-accent/10 ring-accent/30",
+      tone: "text-accent bg-accent-soft ring-accent/30",
       title: `${NOTIFY_LABEL[n.kind] ?? "Email"} ${n.status === "sent" ? "sent" : n.status} to ${n.recipient}`,
       detail: n.last_error ?? undefined,
     });
@@ -48,7 +48,7 @@ function buildTimeline(d: IncidentDetail): Event[] {
     events.push({
       at: i.acknowledged_at,
       icon: <CheckCheck className="h-4 w-4" />,
-      tone: "text-accent bg-accent/10 ring-accent/30",
+      tone: "text-accent bg-accent-soft ring-accent/30",
       title: `Acknowledged${i.acknowledged_by ? ` by ${i.acknowledged_by}` : ""}`,
     });
   }
@@ -192,7 +192,7 @@ export function IncidentDetailView() {
                 </span>
                 <span className="tnum min-w-0 truncate text-right text-xs">
                   {c.is_up ? <>{c.status_code} · {formatMs(c.response_ms)}</> : (
-                    <span className="text-[#fda4af]">{c.error ?? c.error_kind ?? `HTTP ${c.status_code}`}</span>
+                    <span className="text-down-ink">{c.error ?? c.error_kind ?? `HTTP ${c.status_code}`}</span>
                   )}
                 </span>
               </li>

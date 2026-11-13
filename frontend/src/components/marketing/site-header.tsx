@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ButtonLink } from "@/components/ui";
 
 const NAV = [
-  { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/self-hosted", label: "Self-hosted" },
   { href: "/docs", label: "Docs" },
@@ -16,59 +14,50 @@ const NAV = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 border-b border-line/60 bg-ink-950/80 backdrop-blur-md">
-      <div className="container-page flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-line bg-canvas">
+      <div className="container-page flex h-14 items-center gap-8">
         <Logo />
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm text-fg-muted transition-colors hover:text-fg"
-            >
+            <Link key={item.href} href={item.href} className="text-sm text-fg-muted hover:text-fg">
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="hidden items-center gap-2 md:flex">
-          <ButtonLink href="/login" variant="ghost" size="sm">
+        <div className="ml-auto hidden items-center gap-5 md:flex">
+          <Link href="/login" className="text-sm text-fg-muted hover:text-fg">
             Sign in
-          </ButtonLink>
+          </Link>
           <ButtonLink href="/register" size="sm">
-            Start monitoring
+            Create account
           </ButtonLink>
         </div>
         <button
           type="button"
-          className="rounded-md p-2 text-fg-muted hover:text-fg md:hidden"
-          aria-label={open ? "Close menu" : "Open menu"}
+          className="ml-auto -mr-2 px-2 py-1 font-mono text-xs uppercase tracking-wide text-fg-muted hover:text-fg md:hidden"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {open ? "Close" : "Menu"}
         </button>
       </div>
       {open && (
-        <div className="border-t border-line bg-ink-950 md:hidden">
-          <nav className="container-page flex flex-col py-3" aria-label="Mobile">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-3 text-base text-fg-muted hover:text-fg"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="mt-3 grid grid-cols-2 gap-2 pb-2">
-              <ButtonLink href="/login" variant="secondary">
-                Sign in
-              </ButtonLink>
-              <ButtonLink href="/register">Start monitoring</ButtonLink>
-            </div>
-          </nav>
-        </div>
+        <nav className="border-t border-line md:hidden" aria-label="Mobile">
+          <div className="container-page flex flex-col py-2">
+            {[...NAV, { href: "/login", label: "Sign in" }, { href: "/register", label: "Create account" }].map(
+              (item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="border-b border-line py-3 text-[15px] last:border-0"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </div>
+        </nav>
       )}
     </header>
   );

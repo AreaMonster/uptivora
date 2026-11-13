@@ -7,13 +7,16 @@ export const metadata: Metadata = {
     template: "%s · Uptivora",
   },
   description:
-    "Uptivora checks your websites around the clock, tracks response times and SSL certificates, and emails you the moment something goes down. Hosted or self-hosted.",
+    "Uptivora checks your websites every few minutes or every 30 seconds, watches their SSL certificates and emails you when one stops answering. Hosted from CHF 5 a month, or self-hosted with a one-time licence.",
   applicationName: "Uptivora",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#060a12",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f2ed" },
+    { media: "(prefers-color-scheme: dark)", color: "#141412" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

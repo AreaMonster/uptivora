@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, CreditCard, Download, FlaskConical, KeyRound } from "lucide-react";
+import { Download, FlaskConical } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -24,16 +24,16 @@ type Msg = { tone: "success" | "error" | "info"; text: string } | null;
 
 function TestCardPicker({ value, onChange }: { value: Simulate; onChange: (v: Simulate) => void }) {
   return (
-    <fieldset className="mt-4 rounded-xl border border-warn/30 bg-warn-soft p-3">
-      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-[#fde68a]">Test card</legend>
+    <fieldset className="mt-4 rounded-[3px] border border-warn/30 bg-warn-soft p-3">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-warn-ink">Test card</legend>
       {(["success", "decline"] as const).map((v) => (
         <label key={v} className="flex cursor-pointer items-center gap-2.5 py-1 text-sm text-fg">
           <input type="radio" name="simulate" checked={value === v} onChange={() => onChange(v)}
-            className="accent-[#f59e0b]" />
+            className="accent-warn" />
           {v === "success" ? "Card that pays successfully" : "Card that is declined"}
         </label>
       ))}
-      <p className="mt-1 text-xs text-[#fde68a]/80">Simulated payment — no real card, no real charge.</p>
+      <p className="mt-1 text-xs text-warn-ink/80">Simulated payment — no real card, no real charge.</p>
     </fieldset>
   );
 }
@@ -169,7 +169,7 @@ export function BillingView() {
                 {sub.cancel_at_period_end ? "Ends" : "Renews"} on {formatDateTime(sub.current_period_end)}
               </p>
               {sub.pending_plan && (
-                <p className="mt-3 text-sm text-[#99f6e4]">
+                <p className="mt-3 text-sm text-accent-ink">
                   Changes to {sub.pending_plan.name} on {formatDateTime(sub.current_period_end)}.{" "}
                   <button className="underline" onClick={() => run("keep", () => api("/api/billing/cancel-change", { method: "POST" }), `You stay on ${sub.plan.name}.`)}>
                     Keep {sub.plan.name}
@@ -187,7 +187,7 @@ export function BillingView() {
                   <Button variant="ghost" onClick={() => setConfirmCancel(true)}>Cancel subscription</Button>
                 )}
                 {data.test_mode && sub.status !== "cancelled" && (
-                  <div className="w-full max-w-xs rounded-lg border border-warn/30 bg-warn-soft px-3">
+                  <div className="w-full max-w-xs rounded-[3px] border border-warn/30 bg-warn-soft px-3">
                     <Toggle label="Test: fail next renewal" checked={sub.simulate_failure}
                       onChange={(v) => run("sim", () => api("/api/billing/test-settings", { method: "PUT", body: { simulate_renewal_failure: v } }),
                         v ? "The next renewal will be declined (test)." : "The next renewal will succeed (test).")} />
@@ -198,7 +198,7 @@ export function BillingView() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-ink-700 text-accent ring-1 ring-line-strong"><CreditCard className="h-5 w-5" /></div>
+            
             <div>
               <p className="font-semibold">No active plan</p>
               <p className="text-sm text-fg-muted">Choose a plan below to start monitoring. Cancel any time.</p>
@@ -217,11 +217,11 @@ export function BillingView() {
             <div key={p.code} className={cn("card flex flex-col p-6", current && "border-up/50 ring-1 ring-up/30")}>
               <p className="font-semibold">{p.name}</p>
               <p className="mt-1 min-h-10 text-sm text-fg-muted">{p.description}</p>
-              <p className="mt-4"><span className="tnum text-3xl font-semibold">{formatMoney(p.price_cents, p.currency)}</span> <span className="text-sm text-fg-muted">/ month</span></p>
-              <ul className="mt-4 flex-1 space-y-2 text-sm">
-                <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 text-up" />{p.max_monitors} monitors</li>
-                <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 text-up" />Checks every {formatInterval(p.min_interval_seconds)}</li>
-              </ul>
+              <p className="mt-4"><span className="tnum font-mono text-2xl font-medium">{formatMoney(p.price_cents, p.currency)}</span> <span className="text-sm text-fg-muted">/ month</span></p>
+              <dl className="mt-4 flex-1 divide-y divide-line border-y border-line text-sm">
+                <div className="flex justify-between py-1.5"><dt className="text-fg-muted">Websites</dt><dd className="tnum font-mono">{p.max_monitors}</dd></div>
+                <div className="flex justify-between py-1.5"><dt className="text-fg-muted">Checked every</dt><dd className="tnum font-mono">{formatInterval(p.min_interval_seconds)}</dd></div>
+              </dl>
               <Button className="mt-6" variant={action.variant} disabled={action.disabled || !data.enabled || sub?.status === "past_due"}
                 onClick={() => openCheckout(p)}>
                 {action.label}
@@ -338,9 +338,9 @@ function LicenceStore({ data, testMode, onChanged }: { data: BillingSummary; tes
 
   return (
     <section id="licences" className="scroll-mt-20">
-      <h2 className="mt-10 flex items-center gap-2 text-lg font-semibold"><KeyRound className="h-5 w-5 text-accent" /> Self-hosted licences</h2>
+      <h2 className="mt-12 text-lg font-semibold">Self-hosted licences</h2>
       <p className="mt-1 text-sm text-fg-muted">
-        Run Uptivora on your own server with a one-time, lifetime licence. <a href="/self-hosted" className="text-accent hover:underline">What’s included</a>
+        Run Uptivora on your own server with a one-time, lifetime licence. <a href="/self-hosted" className="link">What’s included</a>
       </p>
       {msg && <Alert tone={msg.tone} className="mt-4">{msg.text}</Alert>}
       <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -370,7 +370,7 @@ function LicenceStore({ data, testMode, onChanged }: { data: BillingSummary; tes
                   <Badge tone={st.tone}>{st.label}</Badge>
                   {o.status === "fulfilled" && (
                     <a href={`/api/billing/licence-orders/${o.id}/download`} download
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-ink-750 px-3 py-1.5 text-xs font-semibold hover:bg-ink-700">
+                      className="inline-flex items-center gap-1.5 rounded-[3px] border border-line-strong bg-hover px-3 py-1.5 text-xs font-semibold hover:bg-muted">
                       <Download className="h-3.5 w-3.5" /> Download
                     </a>
                   )}

@@ -1,55 +1,104 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
-/* Uptivora design tokens — dark navy & charcoal, emerald/turquoise status colours. */
+/*
+ * Uptivora design tokens.
+ * Paper and ink: warm off-white surfaces, near-black type, hairline rules. Colour is reserved
+ * for state — green up, red down, ochre warning, cobalt for links and focus. Dark mode follows
+ * the operating system and only swaps the values below.
+ */
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-ink-950: #060a12;   /* page background */
-  --color-ink-900: #0b1220;   /* navy */
-  --color-ink-850: #0f1726;
-  --color-ink-800: #131c2c;   /* card */
-  --color-ink-750: #182235;
-  --color-ink-700: #1f2b40;   /* raised / hover */
-  --color-line: #233047;      /* borders */
-  --color-line-strong: #2f3d57;
+  --color-canvas: #f3f2ed;      /* page */
+  --color-surface: #fbfaf7;     /* panels, cards, inputs */
+  --color-sunken: #eae8e1;      /* wells, tracks, code */
+  --color-hover: #efede7;       /* row hover */
+  --color-muted: #e2e0d8;       /* neutral fills, skeletons */
+  --color-line: #d9d6cc;
+  --color-line-strong: #bdb9ac;
 
-  --color-fg: #e7edf6;
-  --color-fg-muted: #93a3bb;
-  --color-fg-subtle: #64748b;
+  --color-fg: #1a1915;
+  --color-fg-muted: #5a574d;
+  --color-fg-subtle: #8a8678;
 
-  --color-up: #10b981;        /* emerald */
-  --color-up-soft: #10b98126;
-  --color-accent: #2dd4bf;    /* turquoise */
-  --color-accent-strong: #14b8a6;
-  --color-warn: #f59e0b;
-  --color-warn-soft: #f59e0b24;
-  --color-down: #f43f5e;
-  --color-down-soft: #f43f5e24;
-  --color-paused: #64748b;
+  --color-primary: #1a1915;     /* primary buttons */
+  --color-on-primary: #f7f6f2;
 
-  --radius-card: 14px;
-  --shadow-card: 0 1px 0 0 #ffffff08 inset, 0 10px 30px -12px #00000080;
+  --color-up: #1f7a48;
+  --color-up-ink: #17603a;
+  --color-up-soft: #1f7a4817;
+  --color-down: #c9361f;
+  --color-down-ink: #a32a17;
+  --color-down-soft: #c9361f14;
+  --color-warn: #b07418;
+  --color-warn-ink: #855510;
+  --color-warn-soft: #b0741817;
+  --color-accent: #2945c4;
+  --color-accent-ink: #2239a3;
+  --color-accent-soft: #2945c412;
+  --color-paused: #8a8678;
+
+  --radius-card: 4px;
 }
 
 @layer base {
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-canvas: #141412;
+      --color-surface: #1b1b18;
+      --color-sunken: #0f0f0d;
+      --color-hover: #222220;
+      --color-muted: #2b2a26;
+      --color-line: #302f2a;
+      --color-line-strong: #46443d;
+
+      --color-fg: #ebe9e2;
+      --color-fg-muted: #aaa699;
+      --color-fg-subtle: #7b786d;
+
+      --color-primary: #ebe9e2;
+      --color-on-primary: #141412;
+
+      --color-up: #46b276;
+      --color-up-ink: #7fd2a1;
+      --color-up-soft: #46b2761f;
+      --color-down: #ec5f47;
+      --color-down-ink: #f39a8a;
+      --color-down-soft: #ec5f471c;
+      --color-warn: #d9a03d;
+      --color-warn-ink: #e9c47e;
+      --color-warn-soft: #d9a03d1c;
+      --color-accent: #8197ff;
+      --color-accent-ink: #a9b8ff;
+      --color-accent-soft: #8197ff1a;
+      --color-paused: #7b786d;
+    }
+  }
+
   html {
-    color-scheme: dark;
+    color-scheme: light dark;
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-ink-950 text-fg font-sans antialiased;
-    font-feature-settings: "cv11", "ss01";
+    @apply bg-canvas text-fg font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.5;
   }
   ::selection {
-    background: #2dd4bf40;
+    background: color-mix(in oklab, var(--color-accent) 22%, transparent);
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
-  /* Tabular numbers everywhere we show metrics */
+  a {
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
   .tnum {
     font-variant-numeric: tabular-nums;
   }
@@ -57,10 +106,14 @@
 
 @layer components {
   .card {
-    @apply rounded-[var(--radius-card)] border border-line bg-ink-800 shadow-[var(--shadow-card)];
+    @apply rounded-[var(--radius-card)] border border-line bg-surface;
   }
   .container-page {
-    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+    @apply mx-auto w-full max-w-[1120px] px-4 sm:px-6;
+  }
+  /* Small uppercase label above a group, e.g. a table section. */
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-fg-subtle;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-fg;
@@ -69,19 +122,19 @@
     @apply mt-1.5 text-xs text-fg-muted;
   }
   .input {
-    @apply block w-full rounded-lg border border-line bg-ink-900 px-3 py-2.5 text-sm text-fg
+    @apply block w-full rounded-[3px] border border-line-strong bg-surface px-3 py-2 text-sm text-fg
       placeholder:text-fg-subtle transition-colors outline-none
-      focus:border-accent-strong focus:ring-2 focus:ring-accent/25
+      focus:border-accent focus:ring-2 focus:ring-accent/20
       disabled:cursor-not-allowed disabled:opacity-60;
   }
   .input-error {
-    @apply border-down/70 focus:border-down focus:ring-down/25;
+    @apply border-down focus:border-down focus:ring-down/20;
   }
   .prose-uv {
-    @apply text-[15px] leading-relaxed text-fg-muted;
+    @apply text-[15px] leading-[1.65] text-fg-muted;
   }
   .prose-uv h2 {
-    @apply mt-9 mb-3 text-lg font-semibold text-fg;
+    @apply mt-10 mb-3 text-lg font-semibold text-fg;
   }
   .prose-uv p {
     @apply my-3;
@@ -93,31 +146,34 @@
     @apply font-semibold text-fg;
   }
   .prose-uv code {
-    @apply rounded bg-ink-700 px-1.5 py-0.5 font-mono text-[13px] text-fg;
+    @apply rounded-[2px] bg-sunken px-1 py-0.5 font-mono text-[13px] text-fg;
   }
   .prose-uv pre code {
     @apply bg-transparent p-0;
   }
-  .grid-bg {
-    background-image:
-      linear-gradient(to right, #ffffff07 1px, transparent 1px),
-      linear-gradient(to bottom, #ffffff07 1px, transparent 1px);
-    background-size: 44px 44px;
+  .prose-uv a {
+    @apply link;
   }
 }
 
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.7; }
-  80%, 100% { transform: scale(2.2); opacity: 0; }
+@utility link {
+  color: var(--color-accent-ink);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  &:hover {
+    text-decoration-color: var(--color-accent);
+  }
 }
-.status-pulse::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  background: currentColor;
-  animation: pulse-ring 2.2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+
+/* A down monitor's dot blinks slowly; everything else stays still. */
+@keyframes blink-down {
+  0%, 60% { opacity: 1; }
+  80% { opacity: 0.25; }
+  100% { opacity: 1; }
+}
+.status-blink {
+  animation: blink-down 1.6s steps(1, end) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .status-pulse::after { animation: none; }
+  .status-blink { animation: none; }
 }

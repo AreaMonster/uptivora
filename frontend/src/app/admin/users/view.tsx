@@ -45,12 +45,12 @@ export function UsersView() {
           <input className="input pl-9" placeholder="Search by email or name" value={input}
             onChange={(e) => setInput(e.target.value)} />
         </label>
-        <div className="inline-flex rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+        <div className="inline-flex rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
           {FILTERS.map((f) => (
             <button key={f.key} type="button" role="tab" aria-selected={status === f.key}
               onClick={() => { setStatus(f.key); setPage(1); }}
-              className={cn("rounded-md px-3 py-1.5 text-sm font-medium",
-                status === f.key ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+              className={cn("rounded-[3px] px-3 py-1.5 text-sm font-medium",
+                status === f.key ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
               {f.label}
             </button>
           ))}
@@ -75,7 +75,7 @@ export function UsersView() {
               </thead>
               <tbody className="divide-y divide-line">
                 {data.items.map((u) => (
-                  <tr key={u.id} className="hover:bg-ink-750/60">
+                  <tr key={u.id} className="hover:bg-hover/60">
                     <td className="px-5 py-3">
                       <Link href={`/admin/users/${u.id}`} className="font-medium hover:text-accent">{u.email}</Link>
                       <p className="text-xs text-fg-subtle">{u.full_name || "—"}</p>

@@ -19,7 +19,7 @@ backend/            FastAPI API + monitoring worker (Python 3.12)
   tests/            pytest suite (uses a real PostgreSQL)
 frontend/           Next.js 16 web app (marketing site, auth, dashboard)
 tools/licensegen/   OFFLINE licence signing CLI — never shipped
-deploy/             Docker Compose files
+deploy/             Docker Compose: dev services, hosted/, selfhosted/ bundle, release/ build script
 docs/               architecture, editions & licensing, schema, roadmap, runbooks
 ```
 
@@ -88,6 +88,19 @@ cd frontend && UPTIVORA_API_INTERNAL_URL=http://localhost:8001 npm run build && 
 Open http://127.0.0.1:3001 — the first account becomes the administrator. Test licences:
 `python -m licensegen issue --key ../../backend/.dev-keys/dev-private.pem --key-id dev ...`
 in `tools/licensegen`.
+
+## Docker deployment
+
+Both editions run the same two images (`uptivora/api`, `uptivora/web`) behind Caddy:
+
+```bash
+ALLOW_DIRTY=1 deploy/release/build.sh     # images + dist/uptivora-selfhosted-<version>.tar.gz
+```
+
+* Self-hosted bundle: `deploy/selfhosted/` — customer guide in [docs/selfhosted](docs/selfhosted/README.md)
+* Hosted production: `deploy/hosted/` — [operator runbook](docs/operations/hosted-deployment.md),
+  [VPS hardening](docs/operations/vps-hardening.md), [firewall](docs/operations/firewall.md),
+  [release process](docs/operations/release.md)
 
 ## Documentation
 

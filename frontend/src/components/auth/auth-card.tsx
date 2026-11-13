@@ -13,12 +13,10 @@ export function AuthCard({
 }) {
   return (
     <>
-      <div className="card p-7 sm:p-8">
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1.5 text-sm text-fg-muted">{subtitle}</p>}
-        <div className="mt-6">{children}</div>
-      </div>
-      {footer && <div className="mt-5 text-center text-sm text-fg-muted">{footer}</div>}
+      <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">{title}</h1>
+      {subtitle && <p className="mt-2 text-[15px] text-fg-muted">{subtitle}</p>}
+      <div className="mt-8">{children}</div>
+      {footer && <div className="mt-8 border-t border-line pt-5 text-sm text-fg-muted">{footer}</div>}
     </>
   );
 }

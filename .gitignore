@@ -27,3 +27,8 @@ license/*.license
 Thumbs.db
 .idea/
 .vscode/
+
+# Deployment state (never commit)
+dist/
+backups/
+deploy/*/license/

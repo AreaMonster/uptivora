@@ -1,7 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useState } from "react";
-import { FileKey2, ShieldCheck, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Alert, Badge, Button, ConfirmDialog, PageHeader, Skeleton } from "@/components/ui";
 import { ApiError, api, type Limits } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -37,7 +37,7 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
         <span className="text-fg-muted">{label}</span>
         <span className="tnum">{used} / {max ?? "∞"}</span>
       </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink-700">
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
         <div className={max && pct >= 100 ? "h-full bg-warn" : "h-full bg-up"} style={{ width: max ? `${pct}%` : "4%" }} />
       </div>
     </div>
@@ -106,8 +106,7 @@ export function LicenceView() {
           {lic ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-up" />
-                <h2 className="text-lg font-semibold capitalize">{lic.edition} licence</h2>
+                                <h2 className="text-lg font-semibold capitalize">{lic.edition} licence</h2>
                 <Badge tone="up">Valid</Badge>
                 {lic.development_key && <Badge tone="warn">Development key</Badge>}
               </div>
@@ -121,7 +120,7 @@ export function LicenceView() {
                 <div className="sm:col-span-2"><dt className="text-fg-subtle">Licence ID</dt><dd className="break-all font-mono text-xs">{lic.license_id}</dd></div>
               </dl>
               {lic.development_key && (
-                <p className="mt-4 text-xs text-[#fde68a]">Signed with a development key — only accepted while UPTIVORA_ENV is development or test.</p>
+                <p className="mt-4 text-xs text-warn-ink">Signed with a development key — only accepted while UPTIVORA_ENV is development or test.</p>
               )}
               {data.source === "database" && (
                 <Button variant="ghost" size="sm" className="mt-5 px-0" onClick={() => setConfirmRemove(true)}>Remove licence</Button>
@@ -129,7 +128,7 @@ export function LicenceView() {
             </>
           ) : (
             <div className="flex gap-4">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ink-700 text-warn ring-1 ring-line-strong"><FileKey2 className="h-5 w-5" /></div>
+              
               <div>
                 <h2 className="text-lg font-semibold">Evaluation mode</h2>
                 <p className="mt-1 text-sm text-fg-muted">
@@ -155,18 +154,18 @@ export function LicenceView() {
       <section className="card mt-6 p-6">
         <h2 className="font-semibold">{lic ? "Replace licence" : "Install licence"}</h2>
         <p className="mt-1 text-sm text-fg-muted">
-          Upload the <code className="rounded bg-ink-700 px-1">.uptivora-license</code> file you received, or paste its contents.
+          Upload the <code className="rounded bg-muted px-1">.uptivora-license</code> file you received, or paste its contents.
           {data.file_path_configured && " A licence file path is configured on the server; a file at that path takes precedence."}
         </p>
         <div className="mt-4 space-y-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line-strong bg-ink-750 px-3 py-2 text-sm font-medium hover:bg-ink-700">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-line-strong bg-hover px-3 py-2 text-sm font-medium hover:bg-muted">
             <Upload className="h-4 w-4" /> Choose licence file
             <input type="file" accept=".uptivora-license,.license,.txt" className="sr-only" onChange={onFile} />
           </label>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7}
             placeholder="-----BEGIN UPTIVORA LICENSE-----" aria-label="Licence text"
             className={`input font-mono text-[11px] ${fieldError ? "input-error" : ""}`} />
-          {fieldError && <p className="text-xs text-[#fda4af]" role="alert">{fieldError}</p>}
+          {fieldError && <p className="text-xs text-down-ink" role="alert">{fieldError}</p>}
           <Button onClick={install} loading={busy === "install"} disabled={text.trim().length < 50}>Verify & install</Button>
         </div>
       </section>

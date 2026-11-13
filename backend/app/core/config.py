@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 ENV_PREFIX = "UPTIVORA_"
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -52,6 +53,9 @@ class Settings(BaseSettings):
 
     secret_key: SecretStr = Field(default=SecretStr(""))
     database_url: str = "postgresql+asyncpg://uptivora:uptivora@localhost:5433/uptivora"
+    # Optional: replaces the password in database_url, so the URL can live in plain config
+    # while the password comes from a secret file (UPTIVORA_DATABASE_PASSWORD_FILE).
+    database_password: SecretStr = Field(default=SecretStr(""))
     db_pool_size: int = Field(default=10, ge=1, le=100)
 
     # Public base URL of the web app, used in emails and Origin checks.
@@ -98,6 +102,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_environment(self) -> Settings:
+        if self.database_password.get_secret_value():
+            url = make_url(self.database_url).set(
+                password=self.database_password.get_secret_value()
+            )
+            self.database_url = url.render_as_string(hide_password=False)
+
         public = urlsplit(self.public_url)
         if public.scheme not in ("http", "https") or not public.hostname:
             raise ValueError("UPTIVORA_PUBLIC_URL must be an absolute http(s) URL")

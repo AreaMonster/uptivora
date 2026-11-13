@@ -148,23 +148,23 @@ export function MonitorDetail() {
         <Alert tone="error" title="Currently down" className="mb-6">{m.last_error}</Alert>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
         {RANGES.map((r) => (
-          <div key={r} className="card px-4 py-3.5">
+          <div key={r} className="border-t border-fg pt-2">
             <p className="text-xs text-fg-subtle">Uptime {r}</p>
-            <p className="tnum mt-1 text-xl font-semibold">{formatUptime(uptime[r])}</p>
+            <p className="tnum mt-1 font-mono text-xl font-medium">{formatUptime(uptime[r])}</p>
           </div>
         ))}
-        <div className="card px-4 py-3.5">
+        <div className="border-t border-fg pt-2">
           <p className="text-xs text-fg-subtle">Last response</p>
-          <p className="tnum mt-1 text-xl font-semibold">{formatMs(m.last_response_ms)}</p>
+          <p className="tnum mt-1 font-mono text-xl font-medium">{formatMs(m.last_response_ms)}</p>
           <p className="mt-0.5 text-[11px] text-fg-subtle">{timeAgo(m.last_checked_at)}</p>
         </div>
-        <div className="card px-4 py-3.5">
+        <div className="border-t border-fg pt-2">
           <p className="text-xs text-fg-subtle">SSL certificate</p>
-          <p className={cn("tnum mt-1 text-xl font-semibold",
-            sslDays != null && sslDays <= m.ssl_warning_days && "text-warn",
-            sslDays != null && sslDays < 0 && "text-down")}>
+          <p className={cn("tnum mt-1 font-mono text-xl font-medium",
+            sslDays != null && sslDays <= m.ssl_warning_days && "text-warn-ink",
+            sslDays != null && sslDays < 0 && "text-down-ink")}>
             {!m.ssl_check_enabled || !m.url.startsWith("https") ? "—"
               : sslDays == null ? "Pending" : sslDays < 0 ? "Expired" : `${sslDays} days`}
           </p>
@@ -175,12 +175,12 @@ export function MonitorDetail() {
       <section className="card mt-6 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold">Response time & availability</h2>
-          <div className="inline-flex rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+          <div className="inline-flex rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
             {RANGES.map((r) => (
               <button key={r} type="button" role="tab" aria-selected={range === r}
                 onClick={() => setRange(r)}
-                className={cn("rounded-md px-3 py-1 text-xs font-medium",
-                  range === r ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+                className={cn("rounded-[3px] px-3 py-1 text-xs font-medium",
+                  range === r ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
                 {r}
               </button>
             ))}
@@ -217,7 +217,7 @@ export function MonitorDetail() {
                   {c.is_up ? (
                     <>{c.status_code} · {formatMs(c.response_ms)}</>
                   ) : (
-                    <span className="text-[#fda4af]" title={c.error ?? undefined}>
+                    <span className="text-down-ink" title={c.error ?? undefined}>
                       {c.status_code ?? c.error_kind ?? "failed"}
                     </span>
                   )}
@@ -235,7 +235,7 @@ export function MonitorDetail() {
           <ul className="divide-y divide-line">
             {incidents.data?.map((i) => (
               <li key={i.id}>
-                <Link href={`/incidents/${i.id}`} className="block px-5 py-3 text-sm hover:bg-ink-750/60">
+                <Link href={`/incidents/${i.id}`} className="block px-5 py-3 text-sm hover:bg-hover/60">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{formatDateTime(i.started_at, tz)}</span>
                   {i.resolved_at ? (

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { Activity, CreditCard, Lock, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -26,24 +26,6 @@ import {
   timeAgo,
 } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" | "warn" }) {
-  return (
-    <div className="card px-5 py-4">
-      <p className="text-xs font-medium text-fg-subtle">{label}</p>
-      <p
-        className={cn(
-          "tnum mt-1.5 text-2xl font-semibold tracking-tight",
-          tone === "up" && "text-up",
-          tone === "down" && "text-down",
-          tone === "warn" && "text-warn",
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 export function Dashboard() {
   const { me } = useAuth();
@@ -121,7 +103,6 @@ export function Dashboard() {
 
       {noPlan ? (
         <EmptyState
-          icon={<CreditCard className="h-5 w-5" />}
           title="Choose a plan to start monitoring"
           action={<ButtonLink href="/billing">Choose a plan</ButtonLink>}
         >
@@ -130,14 +111,11 @@ export function Dashboard() {
         </EmptyState>
       ) : loading && !monitors ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}
-          </div>
+          <Skeleton className="h-8 w-80" />
           <Skeleton className="h-64" />
         </div>
       ) : monitors && monitors.length === 0 ? (
         <EmptyState
-          icon={<Activity className="h-5 w-5" />}
           title="Add your first monitor"
           action={<ButtonLink href="/monitors/new"><Plus className="h-4 w-4" /> Add monitor</ButtonLink>}
         >
@@ -145,20 +123,48 @@ export function Dashboard() {
         </EmptyState>
       ) : monitors ? (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Up" value={String(summary.up)} tone="up" />
-            <Stat label="Down" value={String(summary.down)} tone={summary.down ? "down" : undefined} />
-            <Stat label="Average uptime (24 h)" value={formatUptime(summary.avg)} />
-            <Stat
-              label="SSL certificates expiring"
-              value={String(summary.ssl)}
-              tone={summary.ssl ? "warn" : undefined}
-            />
-          </div>
+          <Summary monitors={monitors} summary={summary} />
           <MonitorList monitors={monitors} />
         </>
       ) : null}
     </>
+  );
+}
+
+function Summary({ monitors, summary }: {
+  monitors: Monitor[];
+  summary: { up: number; down: number; paused: number; avg: number | null; ssl: number };
+}) {
+  const active = monitors.length - summary.paused;
+  const headline =
+    summary.down > 0
+      ? `${summary.down} of ${active} ${active === 1 ? "monitor" : "monitors"} ${summary.down === 1 ? "is" : "are"} down.`
+      : active === 0
+        ? "All monitors are paused."
+        : `All ${active} ${active === 1 ? "monitor is" : "monitors are"} up.`;
+  const notes = [
+    summary.avg != null ? `${formatUptime(summary.avg)} uptime in the last 24 h` : null,
+    summary.ssl ? `${summary.ssl} certificate${summary.ssl > 1 ? "s" : ""} expiring soon` : null,
+    summary.paused ? `${summary.paused} paused` : null,
+  ].filter(Boolean);
+  return (
+    <div className="mb-6">
+      <p className={cn("flex items-center gap-2.5 text-lg font-semibold",
+        summary.down ? "text-down-ink" : "text-fg")}>
+        <StatusDot status={summary.down ? "down" : active ? "up" : "paused"} />
+        {headline}
+      </p>
+      {notes.length > 0 && (
+        <p className="mt-1 pl-[18px] text-sm text-fg-muted">
+          {notes.map((n, i) => (
+            <span key={n}>
+              {i > 0 && " · "}
+              <span className={cn(n?.includes("certificate") && "text-warn-ink")}>{n}</span>
+            </span>
+          ))}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -168,57 +174,48 @@ function MonitorList({ monitors }: { monitors: Monitor[] }) {
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
   });
   return (
-    <div className="card mt-6 overflow-hidden">
-      <div className="hidden grid-cols-[minmax(0,2fr)_110px_110px_110px_130px] gap-4 border-b border-line px-5 py-3 text-xs font-medium text-fg-subtle xl:grid">
-        <span>Monitor</span>
-        <span>Status</span>
-        <span className="text-right">Uptime 24 h</span>
-        <span className="text-right">Response</span>
-        <span className="text-right">Last check</span>
-      </div>
-      <ul className="divide-y divide-line">
-        {sorted.map((m) => {
-          const sslDays = daysUntil(m.ssl_expires_at);
-          return (
-            <li key={m.id}>
-              <Link
-                href={`/monitors/${m.id}`}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-ink-750/60 xl:grid-cols-[minmax(0,2fr)_110px_110px_110px_130px]"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <StatusDot status={m.status} className="shrink-0" />
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 truncate font-medium">
-                      {m.name}
-                      {sslDays != null && sslDays <= m.ssl_warning_days && (
-                        <span title={`SSL certificate expires in ${sslDays} days`}>
-                          <Lock className="h-3.5 w-3.5 text-warn" />
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate text-xs text-fg-subtle">
-                      {hostOf(m.url)} · every {formatInterval(m.interval_seconds)}
-                    </p>
-                  </div>
-                </div>
-                <div className="xl:order-none">
-                  <StatusPill status={m.status} />
-                </div>
-                <p className="tnum hidden text-right text-sm xl:block">{formatUptime(m.uptime_24h)}</p>
-                <p className="tnum hidden text-right text-sm text-fg-muted xl:block">
+    <div className="card overflow-hidden">
+      <table className="w-full table-fixed text-sm">
+        <thead className="border-b border-line">
+          <tr className="text-left">
+            <th className="eyebrow px-4 py-2.5 font-medium">Monitor</th>
+            <th className="eyebrow hidden w-28 px-3 py-2.5 font-medium sm:table-cell">Status</th>
+            <th className="eyebrow hidden w-24 px-3 py-2.5 text-right font-medium md:table-cell">24 h</th>
+            <th className="eyebrow hidden w-28 px-3 py-2.5 text-right font-medium md:table-cell">Response</th>
+            <th className="eyebrow w-36 px-4 py-2.5 text-right font-medium">Checked</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {sorted.map((m) => {
+            const sslDays = daysUntil(m.ssl_expires_at);
+            const sslWarn = sslDays != null && sslDays <= m.ssl_warning_days;
+            return (
+              <tr key={m.id} className={cn("group relative hover:bg-hover", m.status === "down" && "bg-down-soft")}>
+                <td className="max-w-0 px-4 py-3">
+                  <Link href={`/monitors/${m.id}`} className="flex items-center gap-3 after:absolute after:inset-0">
+                    <StatusDot status={m.status} className="sm:hidden" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium group-hover:underline">{m.name}</span>
+                      <span className="block truncate font-mono text-xs text-fg-subtle">
+                        {hostOf(m.url)} · {formatInterval(m.interval_seconds)}
+                        {sslWarn && <span className="text-warn-ink"> · cert {sslDays} d</span>}
+                      </span>
+                    </span>
+                  </Link>
+                </td>
+                <td className="hidden px-3 py-3 sm:table-cell"><StatusPill status={m.status} /></td>
+                <td className="tnum hidden px-3 py-3 text-right font-mono md:table-cell">{formatUptime(m.uptime_24h)}</td>
+                <td className="tnum hidden px-3 py-3 text-right font-mono text-fg-muted md:table-cell">
                   {m.is_paused ? "—" : formatMs(m.last_response_ms)}
-                </p>
-                <p className="col-span-2 text-xs text-fg-subtle xl:col-span-1 xl:text-right xl:text-sm">
-                  <span className="xl:hidden">
-                    {formatUptime(m.uptime_24h)} uptime · {formatMs(m.last_response_ms)} ·{" "}
-                  </span>
-                  {m.is_paused ? "Paused" : timeAgo(m.last_checked_at)}
-                </p>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-fg-muted">
+                  {m.is_paused ? "paused" : timeAgo(m.last_checked_at)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

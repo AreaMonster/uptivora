@@ -195,7 +195,7 @@ function AssignPlan({ userId, onDone }: { userId: string; onDone: () => Promise<
             {[1, 3, 6, 12, 24].map((m) => <option key={m} value={m}>{m} month{m > 1 ? "s" : ""}</option>)}
           </SelectField>
         </div>
-        {error && <p className="mt-3 text-xs text-[#fda4af]">{error}</p>}
+        {error && <p className="mt-3 text-xs text-down-ink">{error}</p>}
       </ConfirmDialog>
     </>
   );

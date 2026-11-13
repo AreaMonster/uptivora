@@ -17,9 +17,9 @@ const FILTERS = [
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "down" }) {
   return (
-    <div className="card px-5 py-4">
-      <p className="text-xs font-medium text-fg-subtle">{label}</p>
-      <p className={cn("tnum mt-1.5 text-2xl font-semibold tracking-tight", tone === "down" && "text-down")}>
+    <div className="border-t border-fg pt-2">
+      <p className="text-xs text-fg-subtle">{label}</p>
+      <p className={cn("tnum mt-1 font-mono text-2xl font-medium", tone === "down" && "text-down-ink")}>
         {value}
       </p>
     </div>
@@ -60,7 +60,7 @@ export function IncidentsPage() {
     <>
       <PageHeader title="Incidents" description="Every confirmed outage across your monitors." />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-4">
         {s ? (
           <>
             <Stat label="Incidents (30 days)" value={String(s.total)} />
@@ -73,12 +73,12 @@ export function IncidentsPage() {
         )}
       </div>
 
-      <div className="mt-6 inline-flex rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+      <div className="mt-6 inline-flex rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
         {FILTERS.map((f) => (
           <button key={f.key} type="button" role="tab" aria-selected={filter === f.key}
             onClick={() => setFilter(f.key)}
-            className={cn("rounded-md px-3 py-1.5 text-sm font-medium",
-              filter === f.key ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] px-3 py-1.5 text-sm font-medium",
+              filter === f.key ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
             {f.label}
           </button>
         ))}
@@ -103,7 +103,7 @@ export function IncidentsPage() {
             {items.map((i) => (
               <li key={i.id}>
                 <Link href={`/incidents/${i.id}`}
-                  className="grid gap-1 px-5 py-3.5 text-sm hover:bg-ink-750/60 lg:grid-cols-[1.3fr_1.1fr_1.7fr_100px_120px] lg:items-center lg:gap-4">
+                  className="grid gap-1 px-5 py-3.5 text-sm hover:bg-hover/60 lg:grid-cols-[1.3fr_1.1fr_1.7fr_100px_120px] lg:items-center lg:gap-4">
                   <span className="flex min-w-0 items-center gap-2 font-medium">
                     <span className="truncate">{i.monitor_name}</span>
                     {i.note && <MessageSquareText className="h-3.5 w-3.5 shrink-0 text-fg-subtle" aria-label="Has a note" />}

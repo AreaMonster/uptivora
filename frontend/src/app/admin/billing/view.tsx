@@ -48,10 +48,10 @@ export function AdminBillingView() {
   return (
     <>
       <PageHeader title="Billing & licences" description="Self-hosted licence orders waiting for a signed licence, and all payments." />
-      <div className="mb-4 inline-flex rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+      <div className="mb-4 inline-flex rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
         {TABS.map((t) => (
           <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-            className={cn("rounded-md px-3 py-1.5 text-sm font-medium", tab === t.key ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] px-3 py-1.5 text-sm font-medium", tab === t.key ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
             {t.label}
           </button>
         ))}
@@ -110,8 +110,8 @@ function Orders() {
       <div className="mb-3 flex flex-wrap gap-1.5">
         {STATUSES.map((s) => (
           <button key={s} type="button" onClick={() => setStatus(s)}
-            className={cn("rounded-md border px-2.5 py-1 text-xs font-medium capitalize",
-              status === s ? "border-line-strong bg-ink-700 text-fg" : "border-line text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] border px-2.5 py-1 text-xs font-medium capitalize",
+              status === s ? "border-line-strong bg-muted text-fg" : "border-line text-fg-muted hover:text-fg")}>
             {s === "paid" ? "waiting for licence" : s}
           </button>
         ))}
@@ -156,16 +156,16 @@ function Orders() {
         {fulfilling && (
           <div className="space-y-3">
             <p>Sign the licence on your offline machine, then upload or paste the file:</p>
-            <pre className="overflow-x-auto rounded-lg border border-line bg-ink-950 p-3 text-[11px] text-fg">
+            <pre className="overflow-x-auto rounded-[3px] border border-line bg-canvas p-3 text-[11px] text-fg">
 {`python -m licensegen issue --key <your key>.pem --key-id <id> \\
   --edition ${fulfilling.edition} --name "${fulfilling.licensee_name}" \\
   --email ${fulfilling.licensee_email} --order ${fulfilling.id} --out order.uptivora-license`}
             </pre>
             <input type="file" accept=".uptivora-license,.license,.txt" onChange={onFile}
-              className="block w-full text-xs text-fg-muted file:mr-3 file:rounded-md file:border-0 file:bg-ink-700 file:px-3 file:py-1.5 file:text-fg" />
+              className="block w-full text-xs text-fg-muted file:mr-3 file:rounded-[3px] file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-fg" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={6}
               placeholder="-----BEGIN UPTIVORA LICENSE-----" className="input font-mono text-[11px]" />
-            {fieldError && <p className="text-xs text-[#fda4af]" role="alert">{fieldError}</p>}
+            {fieldError && <p className="text-xs text-down-ink" role="alert">{fieldError}</p>}
             <p className="text-xs text-fg-subtle">The server checks the signature with the built-in public keys and that the edition matches the order before accepting it.</p>
           </div>
         )}

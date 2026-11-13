@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 export type DocPage = { slug: string; title: string; summary: string; body: ReactNode };
 
 const Code = ({ children }: { children: string }) => (
-  <pre className="my-4 overflow-x-auto rounded-lg border border-line bg-ink-950 p-4 text-[13px] leading-relaxed text-fg">
+  <pre className="my-4 overflow-x-auto rounded-[var(--radius-card)] bg-primary p-4 font-mono text-[13px] leading-relaxed text-on-primary">
     <code>{children}</code>
   </pre>
 );
@@ -138,34 +138,53 @@ export const DOCS: DocPage[] = [
       <>
         <h2>Requirements</h2>
         <ul>
-          <li>A Linux server (1 vCPU / 1 GB RAM is enough for small installations)</li>
-          <li>Docker Engine and Docker Compose</li>
-          <li>A domain name pointing at the server (TLS certificates are issued automatically)</li>
+          <li>A 64-bit Linux server; 1 vCPU and 1 GB RAM handle a few hundred monitors</li>
+          <li>Docker Engine 24 or newer with the Compose plugin</li>
+          <li>A domain name pointing at the server, with ports 80 and 443 open (the certificate is issued automatically)</li>
           <li>An SMTP server or relay for sending alerts</li>
         </ul>
-        <h2>Installation overview</h2>
-        <Code>{`# 1. Unpack the release bundle and configure it
-cp .env.example .env        # set your domain, SMTP and secrets
-
-# 2. Put your licence file in place (optional — evaluation mode works without it)
-cp ~/Downloads/your.uptivora-license license/uptivora.license
-
-# 3. Start everything
+        <h2>Installation</h2>
+        <Code>{`tar xzf uptivora-selfhosted-<version>.tar.gz
+cd uptivora-selfhosted-<version>
+./install.sh                 # creates .env and secrets/, loads the images
+nano .env                    # UPTIVORA_DOMAIN and the SMTP settings
+nano secrets/smtp_password   # SMTP password
 docker compose up -d`}</Code>
         <p>
           Open your domain in a browser: the first account you create becomes the administrator.
-          The admin overview then shows a short setup checklist.
+          The admin overview then shows a short setup checklist. Database migrations run
+          automatically every time the stack starts.
         </p>
+        <h2>What runs</h2>
+        <ul>
+          <li><strong>caddy</strong> — HTTPS on ports 80/443, certificates from Let’s Encrypt (or its own CA with <code>UPTIVORA_TLS=internal</code> for intranets)</li>
+          <li><strong>web</strong> and <strong>api</strong> — the application</li>
+          <li><strong>worker</strong> — runs the checks and sends email</li>
+          <li><strong>db</strong> — PostgreSQL, on an internal network without outside access</li>
+          <li><strong>backup</strong> — a database dump every night into <code>./backups</code>, kept 14 days</li>
+        </ul>
+        <p>
+          All Uptivora containers run unprivileged with a read-only file system. The complete
+          guides — email, licence, backups and restore, upgrades, troubleshooting — are in the
+          <code>docs/</code> folder of the bundle.
+        </p>
+        <h2>Backups and upgrades</h2>
+        <Code>{`docker compose exec backup uptivora-backup now      # backup now
+docker compose exec backup uptivora-backup verify <file>
+docker load -i images/uptivora-<new>.tar.gz          # upgrade: load the new images,
+sed -i 's/^UPTIVORA_VERSION=.*/UPTIVORA_VERSION=<new>/' .env
+docker compose up -d                                  # migrate and restart`}</Code>
         <h2>Licence and team</h2>
         <ul>
-          <li>Install your licence under <strong>Admin → Licence</strong> (upload or paste the file), or place it at the path set in <code>UPTIVORA_LICENSE_PATH</code>.</li>
+          <li>Install your licence under <strong>Admin → Licence</strong> (upload or paste the file), or copy it to <code>license/uptivora.license</code> next to <code>compose.yaml</code>.</li>
           <li>Invite colleagues under <strong>Admin → Users</strong>. They receive an email to choose a password. Invited accounts count towards your licence’s user limit.</li>
           <li>Alternatively, switch on open sign-up under <strong>Admin → System</strong>.</li>
         </ul>
         <h2>No outbound dependencies</h2>
         <p>
-          A self-hosted installation only connects to the websites you monitor and to your SMTP
-          server. It never contacts Uptivora — not for licence checks, updates or telemetry.
+          A self-hosted installation only connects to the websites you monitor, your SMTP server
+          and DNS — plus the certificate authority when Caddy obtains a certificate. It never
+          contacts Uptivora: not for licence checks, updates or telemetry.
         </p>
       </>
     ),

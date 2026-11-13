@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Alert, Badge, PageHeader, Skeleton } from "@/components/ui";
 import { SetupChecklist } from "@/components/admin/invitations";
+import { TOOLTIP_STYLE } from "@/components/app/charts";
 import type { AdminHealth, AdminOverview, SystemEventRow } from "@/lib/admin-types";
 import { cn, formatDuration, formatMoney, formatNumber, timeAgo } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
@@ -26,10 +26,10 @@ export function Kpi({ label, value, sub, tone }: {
   tone?: "up" | "down" | "warn";
 }) {
   return (
-    <div className="card px-5 py-4">
-      <p className="text-xs font-medium text-fg-subtle">{label}</p>
-      <p className={cn("tnum mt-1.5 text-2xl font-semibold tracking-tight",
-        tone === "up" && "text-up", tone === "down" && "text-down", tone === "warn" && "text-warn")}>
+    <div className="border-t border-fg pt-2.5">
+      <p className="text-xs text-fg-subtle">{label}</p>
+      <p className={cn("tnum mt-1 font-mono text-2xl font-medium tracking-tight",
+        tone === "up" && "text-up-ink", tone === "down" && "text-down-ink", tone === "warn" && "text-warn-ink")}>
         {value}
       </p>
       {sub && <p className="mt-0.5 text-xs text-fg-subtle">{sub}</p>}
@@ -61,19 +61,20 @@ export function AdminOverviewView() {
       {health && (
         <Link href="/admin/system" className="mb-6 block">
           {health.status === "ok" ? (
-            <div className="flex items-center gap-3 rounded-xl border border-up/30 bg-up-soft px-4 py-3 text-sm text-[#a7f3d0]">
-              <CheckCircle2 className="h-4 w-4" /> All systems operational — {health.workers.filter((w) => w.alive).length} worker(s) running, database {health.database.latency_ms} ms.
-            </div>
+            <p className="flex items-center gap-2.5 text-sm text-fg-muted hover:text-fg">
+              <span className="h-2 w-2 rounded-full bg-up" aria-hidden />
+              Running normally — {health.workers.filter((w) => w.alive).length} worker(s), database {health.database.latency_ms} ms.
+            </p>
           ) : (
-            <div className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-[#fde68a]">
-              <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Attention needed</p>
-              <ul className="mt-1 list-disc pl-6">{health.issues.map((i) => <li key={i}>{i}</li>)}</ul>
+            <div className="border-l-[3px] border-warn bg-warn-soft px-4 py-3 text-sm">
+              <p className="font-semibold">Needs attention</p>
+              <ul className="mt-1 list-disc pl-5 text-fg-muted">{health.issues.map((i) => <li key={i}>{i}</li>)}</ul>
             </div>
           )}
         </Link>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
         <Kpi label="Users" value={formatNumber(ov.users.total)} sub={`+${ov.users.new_7d} in 7 days · ${ov.users.active_30d} active`} />
         {subs ? (
           <>
@@ -114,15 +115,15 @@ export function AdminOverviewView() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={ov.checks_by_hour.map((p) => ({ ...p, ok: p.total - p.failed }))}
                 margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
-                <CartesianGrid stroke="#233047" strokeDasharray="3 4" vertical={false} />
-                <XAxis dataKey="t" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false}
+                <CartesianGrid stroke="var(--color-line)" vertical={false} />
+                <XAxis dataKey="t" stroke="var(--color-fg-subtle)" fontSize={11} fontFamily="var(--font-mono)" tickLine={false} axisLine={false}
                   tickFormatter={(v) => new Date(v).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} minTickGap={28} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} width={48} />
-                <Tooltip cursor={{ fill: "#ffffff08" }}
-                  contentStyle={{ background: "#131c2c", border: "1px solid #2f3d57", borderRadius: 10, fontSize: 12, color: "#e7edf6" }}
+                <YAxis stroke="var(--color-fg-subtle)" fontSize={11} fontFamily="var(--font-mono)" tickLine={false} axisLine={false} width={48} />
+                <Tooltip cursor={{ fill: "var(--color-hover)" }}
+                  contentStyle={TOOLTIP_STYLE}
                   labelFormatter={(v) => new Date(String(v)).toLocaleString("en-GB")} />
-                <Bar dataKey="ok" name="Successful" stackId="c" fill="#10b981" isAnimationActive={false} />
-                <Bar dataKey="failed" name="Failed" stackId="c" fill="#f43f5e" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                <Bar dataKey="ok" name="Successful" stackId="c" fill="var(--color-up)" isAnimationActive={false} />
+                <Bar dataKey="failed" name="Failed" stackId="c" fill="var(--color-down)" isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>

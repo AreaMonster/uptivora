@@ -3,16 +3,17 @@ import { Logo } from "@/components/logo";
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <div className="grid-bg pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]" />
-      <header className="container-page relative flex h-16 items-center justify-between">
-        <Logo />
-        <Link href="/" className="text-sm text-fg-muted hover:text-fg">
-          Back to website
-        </Link>
+    <div className="flex min-h-screen flex-col">
+      <header className="border-b border-line">
+        <div className="container-page flex h-14 items-center justify-between">
+          <Logo />
+          <Link href="/" className="text-sm text-fg-muted hover:text-fg">
+            uptivora.com
+          </Link>
+        </div>
       </header>
-      <main className="relative flex flex-1 items-start justify-center px-4 pb-16 pt-8 sm:items-center sm:pt-0">
-        <div className="w-full max-w-[420px]">{children}</div>
+      <main className="container-page flex-1 pb-20 pt-12 sm:pt-20">
+        <div className="w-full max-w-[400px] sm:ml-[8%]">{children}</div>
       </main>
     </div>
   );

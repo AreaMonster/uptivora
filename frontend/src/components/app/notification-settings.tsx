@@ -148,7 +148,7 @@ function RecipientsSection() {
       <div className="space-y-5">
         {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
 
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-line bg-ink-850 px-4 py-3">
+        <div className="flex items-center justify-between gap-4 rounded-[3px] border border-line bg-sunken px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <Mail className="h-4 w-4 shrink-0 text-fg-subtle" />
             <div className="min-w-0">
@@ -165,7 +165,7 @@ function RecipientsSection() {
         </div>
 
         {contacts.loading ? <Skeleton className="h-16" /> : list.length > 0 && (
-          <ul className="divide-y divide-line rounded-xl border border-line">
+          <ul className="divide-y divide-line rounded-[3px] border border-line">
             {list.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">

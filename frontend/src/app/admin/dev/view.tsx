@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { Copy, Download, FlaskConical } from "lucide-react";
+import { Copy, Download } from "lucide-react";
 import { Alert, Button, PageHeader, SelectField, Skeleton, TextField, Toggle } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
 import type { AdminPlan } from "@/lib/admin-types";
@@ -65,7 +65,7 @@ function TestAccount() {
 
   return (
     <section className="card p-6">
-      <h2 className="flex items-center gap-2 font-semibold"><FlaskConical className="h-4 w-4 text-warn" /> Test account</h2>
+      <h2 className="font-semibold">Test account</h2>
       <p className="mt-1 text-sm text-fg-muted">Confirmed email, optional TEST subscription.</p>
       <form onSubmit={submit} className="mt-4 space-y-4">
         {error && <Alert tone="error">{error}</Alert>}
@@ -127,7 +127,7 @@ function TestLicence({ keyAvailable }: { keyAvailable: boolean }) {
 
   return (
     <section className="card p-6">
-      <h2 className="flex items-center gap-2 font-semibold"><FlaskConical className="h-4 w-4 text-warn" /> Test licence</h2>
+      <h2 className="font-semibold">Test licence</h2>
       <p className="mt-1 text-sm text-fg-muted">Signed with the development key in <code>backend/.dev-keys</code>.</p>
       {!keyAvailable && (
         <Alert tone="info" className="mt-4">
@@ -149,7 +149,7 @@ function TestLicence({ keyAvailable }: { keyAvailable: boolean }) {
       </form>
       {result && (
         <div className="mt-4 space-y-2">
-          <pre className="max-h-48 overflow-auto rounded-lg border border-line bg-ink-950 p-3 text-[11px] leading-relaxed">{result.licence_text}</pre>
+          <pre className="max-h-48 overflow-auto rounded-[3px] border border-line bg-canvas p-3 text-[11px] leading-relaxed">{result.licence_text}</pre>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={download}><Download className="h-3.5 w-3.5" /> Download</Button>
             <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard.writeText(result.licence_text); setCopied(true); }}>

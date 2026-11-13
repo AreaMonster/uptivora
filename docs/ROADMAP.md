@@ -184,13 +184,39 @@ VAT handling and invoices as PDF (Phase 10 / legal review).
 
 Tests: 275 backend tests (+12).
 
-## Phase 8 — Docker deployment and documentation
+## Phase 8 — Docker deployment and documentation ✅ (2026-11-13)
 
-- Multi-stage Dockerfiles (non-root, read-only FS, no dev keys / tools in images)
-- `deploy/hosted/` and `deploy/selfhosted/` compose files, Caddy config (auto TLS),
-  backup service (`pg_dump` rotation) + restore runbook, upgrade procedure
-- Customer docs: install, configure SMTP, licence install, backups, upgrade, troubleshooting
-- Operator docs: VPS hardening, firewall egress rules, key ceremony, release process
+- [x] Multi-stage images: `backend/Dockerfile` (API + worker, Python 3.12 slim, pinned by
+      `backend/constraints.txt`, uid 10001, byte-compiled, no dev seed/keys/tests) and
+      `frontend/Dockerfile` (Next.js standalone, Node 24 alpine, `node` user, telemetry off,
+      npm removed from the runtime image)
+- [x] `deploy/selfhosted/` (the customer bundle) and `deploy/hosted/`: read-only containers,
+      `cap_drop: ALL`, `no-new-privileges`, database on an `internal: true` network, Docker
+      secrets for DB password / secret key / SMTP password (`UPTIVORA_DATABASE_PASSWORD_FILE`
+      is new), migrations as a one-shot service before API and workers start
+- [x] Caddy: automatic HTTPS (`UPTIVORA_TLS=auto`) or its own CA for intranets (`internal`),
+      `/api/*` to the API, rest to the web app, HSTS, admin API off; the API trusts
+      `X-Forwarded-For` only from the edge network subnet
+- [x] Backup service: nightly `pg_dump` with rotation; `now`, `list`, `verify` (restore into a
+      scratch database) and `restore` commands
+- [x] `deploy/release/build.sh`: refuses dirty trees and tracked keys, builds both images,
+      checks the API image for dev files, writes the offline bundle + SHA256SUMS
+- [x] Customer docs (`docs/selfhosted/`): install, SMTP, licence, backups, upgrade,
+      troubleshooting. Operator docs (`docs/operations/`): hosted deployment, VPS hardening,
+      firewall incl. egress rules, release process (key ceremony: `LICENSE_KEY_OPERATIONS.md`)
+- [x] Verified on Docker Desktop: self-hosted stack over HTTPS (first-admin sign-up,
+      monitor checked from the worker, email via SMTP, dev-signed licence rejected by the
+      production image, backup → verify → wipe → restore), hosted stack with two workers and
+      the operator CLI, and a full release build
+
+### Redesign (2026-11-13)
+
+The first UI used the stock dark-navy/teal "AI dashboard" look. Replaced with a paper-and-ink
+system: IBM Plex Sans/Mono (self-hosted), warm off-white surfaces, near-black type, hairline
+rules, 3–4 px corners, colour only for state; light and dark follow the OS. Top navigation
+instead of an icon sidebar, ruled figures instead of KPI cards, tables instead of card grids.
+The landing page explains one real outage as a check log and the two emails it causes, and
+says plainly what the product does not do. Alert email subjects no longer carry emoji.
 
 ## Phase 9 — Security and performance testing
 

@@ -74,7 +74,7 @@ export function SystemView() {
             <Row label="Load (1/5/15 min)" value={h.server.load_average ? h.server.load_average.map((l) => l.toFixed(2)).join(" / ") : "n/a"} />
           </dl>
           {diskPct != null && (
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink-700">
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
               <div className={diskPct > 85 ? "h-full bg-down" : diskPct > 70 ? "h-full bg-warn" : "h-full bg-up"} style={{ width: `${diskPct}%` }} />
             </div>
           )}
@@ -93,7 +93,7 @@ export function SystemView() {
           </span>
         </div>
         {h.workers.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-fg-muted">No worker has reported yet. Start one with <code className="rounded bg-ink-700 px-1.5 py-0.5">python -m app.worker</code>.</p>
+          <p className="px-5 py-6 text-sm text-fg-muted">No worker has reported yet. Start one with <code className="rounded bg-muted px-1.5 py-0.5">python -m app.worker</code>.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">

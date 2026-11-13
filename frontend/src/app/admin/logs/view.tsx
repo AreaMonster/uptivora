@@ -24,10 +24,10 @@ export function LogsView() {
   return (
     <>
       <PageHeader title="Logs" description="Operational events from the API and workers, and every security-relevant action." />
-      <div className="mb-4 inline-flex rounded-lg border border-line bg-ink-900 p-0.5" role="tablist">
+      <div className="mb-4 inline-flex rounded-[3px] border border-line bg-sunken p-0.5" role="tablist">
         {TABS.map((t) => (
           <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-            className={cn("rounded-md px-3 py-1.5 text-sm font-medium", tab === t.key ? "bg-ink-700 text-fg" : "text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] px-3 py-1.5 text-sm font-medium", tab === t.key ? "bg-muted text-fg" : "text-fg-muted hover:text-fg")}>
             {t.label}
           </button>
         ))}
@@ -45,8 +45,8 @@ function AppLog() {
       <div className="mb-3 flex flex-wrap gap-1.5">
         {LEVELS.map((l) => (
           <button key={l} type="button" onClick={() => setLevel(l)}
-            className={cn("rounded-md border px-2.5 py-1 text-xs font-medium capitalize",
-              level === l ? "border-line-strong bg-ink-700 text-fg" : "border-line text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] border px-2.5 py-1 text-xs font-medium capitalize",
+              level === l ? "border-line-strong bg-muted text-fg" : "border-line text-fg-muted hover:text-fg")}>
             {l === "warning" ? "warnings & errors" : l}
           </button>
         ))}
@@ -65,7 +65,7 @@ function AppLog() {
               </div>
               <p className="mt-1.5 break-words">{e.message}</p>
               {typeof e.details?.exception === "string" && (
-                <p className="mt-1 break-words font-mono text-xs text-[#fda4af]">{e.details.exception}</p>
+                <p className="mt-1 break-words font-mono text-xs text-down-ink">{e.details.exception}</p>
               )}
             </li>
           ))}
@@ -85,8 +85,8 @@ function AuditLog() {
       <div className="mb-3 flex flex-wrap gap-1.5">
         {[["", "All"], ["admin.", "Admin actions"], ["auth.", "Sign-ins"], ["user.", "Accounts"], ["monitor.", "Monitors"]].map(([v, l]) => (
           <button key={v} type="button" onClick={() => setAction(v)}
-            className={cn("rounded-md border px-2.5 py-1 text-xs font-medium",
-              action === v ? "border-line-strong bg-ink-700 text-fg" : "border-line text-fg-muted hover:text-fg")}>
+            className={cn("rounded-[3px] border px-2.5 py-1 text-xs font-medium",
+              action === v ? "border-line-strong bg-muted text-fg" : "border-line text-fg-muted hover:text-fg")}>
             {l}
           </button>
         ))}
@@ -105,7 +105,7 @@ function AuditLog() {
                   <td className="whitespace-nowrap px-5 py-2.5 text-fg-muted">{formatDateTime(a.created_at)}</td>
                   <td className="px-2 py-2.5">
                     <span className={cn("font-mono text-xs", a.action.startsWith("admin.") && "text-warn",
-                      a.action === "auth.login_failed" && "text-[#fda4af]")}>{a.action}</span>
+                      a.action === "auth.login_failed" && "text-down-ink")}>{a.action}</span>
                     {Object.keys(a.details ?? {}).length > 0 && (
                       <p className="mt-0.5 max-w-[360px] truncate font-mono text-[11px] text-fg-subtle" title={JSON.stringify(a.details)}>
                         {JSON.stringify(a.details)}

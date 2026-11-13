@@ -1,66 +1,39 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 
-const COLUMNS = [
-  {
-    title: "Product",
-    links: [
-      { href: "/#features", label: "Features" },
-      { href: "/pricing", label: "Pricing" },
-      { href: "/self-hosted", label: "Self-hosted licence" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { href: "/docs", label: "Documentation" },
-      { href: "/docs/getting-started", label: "Getting started" },
-      { href: "/docs/self-hosting", label: "Self-hosting guide" },
-    ],
-  },
-  {
-    title: "Account",
-    links: [
-      { href: "/login", label: "Sign in" },
-      { href: "/register", label: "Create account" },
-      { href: "/forgot-password", label: "Reset password" },
-    ],
-  },
+const LINKS = [
+  { href: "/pricing", label: "Pricing" },
+  { href: "/self-hosted", label: "Self-hosted licence" },
+  { href: "/docs", label: "Documentation" },
+  { href: "/docs/self-hosting", label: "Installation guide" },
+  { href: "/login", label: "Sign in" },
+  { href: "/register", label: "Create account" },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-line/70 bg-ink-950">
-      <div className="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div>
+    <footer className="mt-auto border-t border-line">
+      <div className="container-page flex flex-col gap-8 py-10 md:flex-row md:justify-between">
+        <div className="max-w-sm">
           <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-fg-muted">
-            Website uptime and SSL monitoring. No tracking, no third-party analytics, no
-            surprises.
+          <p className="mt-3 text-sm text-fg-muted">
+            Uptime and certificate monitoring by email. This website sets no cookies until you
+            sign in and runs no analytics.
           </p>
         </div>
-        {COLUMNS.map((col) => (
-          <div key={col.title}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-              {col.title}
-            </p>
-            <ul className="mt-3 space-y-2">
-              {col.links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="text-sm text-fg-muted hover:text-fg">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        <ul className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm sm:grid-cols-3">
+          {LINKS.map((l) => (
+            <li key={l.href}>
+              <Link href={l.href} className="text-fg-muted hover:text-fg">
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
-      <div className="border-t border-line/60">
-        <div className="container-page flex flex-col gap-2 py-5 text-xs text-fg-subtle sm:flex-row sm:justify-between">
-          <p>© Uptivora. All rights reserved.</p>
-          <p>Prices in Swiss francs (CHF).</p>
-        </div>
+      <div className="container-page flex flex-col gap-1 border-t border-line py-4 font-mono text-[11px] text-fg-subtle sm:flex-row sm:justify-between">
+        <span>© Uptivora</span>
+        <span>Prices in Swiss francs (CHF)</span>
       </div>
     </footer>
   );

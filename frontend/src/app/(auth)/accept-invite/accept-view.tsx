@@ -37,7 +37,7 @@ export function AcceptInvite() {
 
   return (
     <AuthCard title="Join your team on Uptivora" subtitle="Choose a password to activate your account."
-      footer={<Link href="/login" className="text-accent hover:underline">Already activated? Sign in</Link>}>
+      footer={<Link href="/login" className="link">Already activated? Sign in</Link>}>
       {token === "" ? (
         <Alert tone="error">This invitation link is incomplete. Open it again from the email.</Alert>
       ) : (

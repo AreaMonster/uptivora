@@ -3,17 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
-import {
-  AlertOctagon,
-  BookOpen,
-  CreditCard,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Settings,
-  ShieldCheck,
-  X,
-} from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Alert, Button, Spinner } from "@/components/ui";
 import { api, type PublicConfig } from "@/lib/api";
@@ -21,10 +10,10 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/format";
 
 const NAV = [
-  { href: "/dashboard", label: "Monitors", icon: LayoutDashboard, match: ["/dashboard", "/monitors"] },
-  { href: "/incidents", label: "Incidents", icon: AlertOctagon, match: ["/incidents"] },
-  { href: "/billing", label: "Billing", icon: CreditCard, match: ["/billing"], hostedOnly: true },
-  { href: "/settings", label: "Settings", icon: Settings, match: ["/settings"] },
+  { href: "/dashboard", label: "Monitors", match: ["/dashboard", "/monitors"] },
+  { href: "/incidents", label: "Incidents", match: ["/incidents"] },
+  { href: "/billing", label: "Billing", match: ["/billing"], hostedOnly: true },
+  { href: "/settings", label: "Settings", match: ["/settings"] },
 ];
 
 /** Billing exists only where limits come from a per-user plan (hosted edition). */
@@ -56,19 +45,19 @@ function Gate({ children }: { children: ReactNode }) {
   if (!me) {
     return (
       <div className="grid min-h-screen place-items-center">
-        <Spinner className="h-6 w-6" />
+        <Spinner className="h-5 w-5" />
       </div>
     );
   }
   return <Frame>{children}</Frame>;
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ vertical, onNavigate }: { vertical?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const nav = useNav();
   return (
     <>
-      {nav.map(({ href, label, icon: Icon, match }) => {
+      {nav.map(({ href, label, match }) => {
         const active = match.some((m) => pathname === m || pathname.startsWith(`${m}/`));
         return (
           <Link
@@ -77,11 +66,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-ink-700 text-fg" : "text-fg-muted hover:bg-ink-800 hover:text-fg",
+              "text-sm transition-colors",
+              vertical
+                ? cn("border-b border-line py-3 text-[15px]", active ? "font-semibold" : "text-fg-muted")
+                : cn(
+                    "flex h-14 items-center border-b-2",
+                    active ? "border-fg font-medium text-fg" : "border-transparent text-fg-muted hover:text-fg",
+                  ),
             )}
           >
-            <Icon className={cn("h-4 w-4", active && "text-accent")} aria-hidden />
             {label}
           </Link>
         );
@@ -94,10 +87,8 @@ function StaticNavLinks() {
   const nav = useNav();
   return (
     <>
-      {nav.map(({ href, label, icon: Icon }) => (
-        <Link key={href} href={href}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted">
-          <Icon className="h-4 w-4" aria-hidden />
+      {nav.map(({ href, label }) => (
+        <Link key={href} href={href} className="flex h-14 items-center border-b-2 border-transparent text-sm text-fg-muted">
           {label}
         </Link>
       ))}
@@ -108,7 +99,7 @@ function StaticNavLinks() {
 function Frame({ children }: { children: ReactNode }) {
   const { me, logout } = useAuth();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [testMode, setTestMode] = useState(false);
   useEffect(() => {
     api<PublicConfig>("/api/public/config").then((c) => setTestMode(c.billing_test_mode), () => {});
@@ -120,88 +111,72 @@ function Frame({ children }: { children: ReactNode }) {
     router.replace("/login");
   }
 
-  const sidebar = (onNavigate?: () => void) => (
-    <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center px-5">
-        <Logo href="/dashboard" />
-      </div>
-      <nav className="flex-1 space-y-1 px-3 py-4" aria-label="App">
-        <Suspense fallback={<StaticNavLinks />}>
-          <NavLinks onNavigate={onNavigate} />
-        </Suspense>
-        {me.user.role === "admin" && (
-          <Link
-            href="/admin"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-warn/90 hover:bg-ink-800 hover:text-warn"
-          >
-            <ShieldCheck className="h-4 w-4" aria-hidden /> Admin
-          </Link>
-        )}
-        <Link
-          href="/docs"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted hover:bg-ink-800 hover:text-fg"
-        >
-          <BookOpen className="h-4 w-4" aria-hidden /> Documentation
-        </Link>
-      </nav>
-      <div className="border-t border-line p-4">
-        <p className="truncate text-sm font-medium">{me.user.full_name || me.user.email}</p>
-        <p className="truncate text-xs text-fg-subtle">{me.user.email}</p>
-        {me.limits.source === "licence" && me.limits.licensee && (
-          <p className="mt-2 truncate text-[11px] text-fg-subtle" title="Self-hosted licence">
-            Licensed to {me.limits.licensee}
-          </p>
-        )}
-        {me.limits.source === "unlicensed" && (
-          <p className="mt-2 text-[11px] text-warn/90">Evaluation mode — no licence installed</p>
-        )}
-        <button
-          type="button"
-          onClick={signOut}
-          className="mt-3 inline-flex items-center gap-2 text-xs text-fg-muted hover:text-fg"
-        >
-          <LogOut className="h-3.5 w-3.5" /> Sign out
-        </button>
-      </div>
-    </div>
-  );
+  const isAdmin = me.user.role === "admin";
 
   return (
-    <div className="min-h-screen lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-line bg-ink-900 lg:block">
-        {sidebar()}
-      </aside>
-
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-ink-900/95 px-4 backdrop-blur lg:hidden">
-        <Logo href="/dashboard" />
-        <button type="button" onClick={() => setMobileOpen(true)} aria-label="Open menu"
-          className="rounded-md p-2 text-fg-muted hover:text-fg">
-          <Menu className="h-5 w-5" />
-        </button>
-      </div>
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-ink-900">
-            <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu"
-              className="absolute right-3 top-4 rounded-md p-2 text-fg-muted hover:text-fg">
-              <X className="h-5 w-5" />
-            </button>
-            {sidebar(() => setMobileOpen(false))}
-          </div>
-        </div>
-      )}
-
+    <div className="flex min-h-screen flex-col">
       {testMode && me.limits.scope === "user" && (
-        <div className="border-b border-warn/30 bg-warn/10 px-4 py-1.5 text-center text-xs font-medium text-[#fde68a]">
-          TEST MODE — payments are simulated. No real money is charged.
+        <div className="bg-warn px-4 py-1 text-center font-mono text-[11px] font-medium uppercase tracking-wider text-canvas">
+          Test mode — payments are simulated, no money is charged
         </div>
       )}
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <header className="border-b border-line bg-canvas">
+        <div className="container-page flex h-14 items-center gap-8">
+          <Logo href="/dashboard" />
+          <nav className="hidden items-stretch gap-6 md:flex" aria-label="App">
+            <Suspense fallback={<StaticNavLinks />}>
+              <NavLinks />
+            </Suspense>
+          </nav>
+          <div className="ml-auto hidden items-center gap-5 text-sm md:flex">
+            {isAdmin && <Link href="/admin" className="text-fg-muted hover:text-fg">Admin</Link>}
+            <Link href="/docs" className="text-fg-muted hover:text-fg">Docs</Link>
+            <span className="h-4 w-px bg-line-strong" aria-hidden />
+            <span className="max-w-[200px] truncate text-fg-muted" title={me.user.email}>
+              {me.user.full_name || me.user.email}
+            </span>
+            <button type="button" onClick={signOut} className="text-fg-muted hover:text-fg">
+              Sign out
+            </button>
+          </div>
+          <button
+            type="button"
+            className="ml-auto -mr-2 px-2 py-1 font-mono text-xs uppercase tracking-wide text-fg-muted md:hidden"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
+        </div>
+        {menuOpen && (
+          <nav className="container-page flex flex-col border-t border-line pb-3 md:hidden" aria-label="App menu">
+            <Suspense fallback={null}>
+              <NavLinks vertical onNavigate={() => setMenuOpen(false)} />
+            </Suspense>
+            {isAdmin && <Link href="/admin" className="border-b border-line py-3 text-[15px] text-fg-muted">Admin</Link>}
+            <Link href="/docs" className="border-b border-line py-3 text-[15px] text-fg-muted">Docs</Link>
+            <p className="pt-3 text-sm text-fg-subtle">{me.user.email}</p>
+            <button type="button" onClick={signOut} className="mt-2 self-start text-sm underline">
+              Sign out
+            </button>
+          </nav>
+        )}
+      </header>
+
+      <main className="container-page flex-1 py-8">
         <Banners />
         {children}
       </main>
+
+      {me.limits.scope === "instance" && (
+        <footer className="border-t border-line">
+          <div className="container-page py-3 font-mono text-[11px] text-fg-subtle">
+            {me.limits.source === "licence" && me.limits.licensee
+              ? `Self-hosted · ${me.limits.edition} licence · licensed to ${me.limits.licensee}`
+              : "Self-hosted · evaluation mode, no licence installed"}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

@@ -71,3 +71,20 @@ def test_file_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 def test_secret_not_in_repr() -> None:
     s = make(env="production", public_url="https://app.uptivora.com", secret_key=STRONG)
     assert STRONG not in repr(s)
+
+
+def test_database_password_secret_is_injected_into_url(tmp_path: Path, monkeypatch) -> None:
+    secret = tmp_path / "db_password"
+    secret.write_text("p@ss/w:rd with spaces\n", encoding="utf-8")
+    monkeypatch.setenv("UPTIVORA_DATABASE_PASSWORD_FILE", str(secret))
+    s = make(database_url="postgresql+asyncpg://uptivora@db:5432/uptivora")
+    from sqlalchemy.engine import make_url
+
+    url = make_url(s.database_url)
+    assert url.password == "p@ss/w:rd with spaces"
+    assert (url.host, url.port, url.database, url.username) == ("db", 5432, "uptivora", "uptivora")
+
+
+def test_database_url_unchanged_without_password_secret() -> None:
+    url = "postgresql+asyncpg://u:pw@localhost:5433/x"
+    assert make(database_url=url).database_url == url

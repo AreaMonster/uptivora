@@ -1,0 +1,161 @@
+# Uptivora — self-hosted edition.
+#
+#   ./install.sh          # once: creates .env, secrets/ and loads the bundled images
+#   docker compose up -d  # start (database migrations run automatically)
+#
+# Services: caddy (HTTPS) -> web (Next.js) and api (FastAPI); worker runs the checks and
+# sends email; db is PostgreSQL; backup writes a nightly pg_dump to ./backups.
+# Nothing in this stack contacts Uptivora. Outbound traffic: the websites you monitor,
+# your SMTP server, DNS, and (with UPTIVORA_TLS=auto) the ACME certificate authority.
+name: uptivora
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+x-backend: &backend
+  <<: *hardening
+  image: ${UPTIVORA_IMAGE_PREFIX:-uptivora}/api:${UPTIVORA_VERSION:?Set UPTIVORA_VERSION in .env}
+  env_file: .env
+  environment: &backend-env
+    UPTIVORA_ENV: production
+    UPTIVORA_EDITION: selfhosted
+    UPTIVORA_PUBLIC_URL: ${UPTIVORA_PUBLIC_URL:-https://${UPTIVORA_DOMAIN:?Set UPTIVORA_DOMAIN in .env}}
+    UPTIVORA_DATABASE_URL: postgresql+asyncpg://uptivora@db:5432/uptivora
+    UPTIVORA_DATABASE_PASSWORD_FILE: /run/secrets/db_password
+    UPTIVORA_SECRET_KEY_FILE: /run/secrets/secret_key
+    UPTIVORA_SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+    UPTIVORA_LICENSE_PATH: /license/uptivora.license
+    UPTIVORA_BILLING_PROVIDER: disabled
+    # Only Caddy (on the edge network) may set X-Forwarded-For.
+    UPTIVORA_TRUSTED_PROXIES: '["${UPTIVORA_SUBNET:-10.250.47.0/24}"]'
+  secrets: [db_password, secret_key, smtp_password]
+  volumes:
+    - ./license:/license:ro
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:17-alpine
+    # PostgreSQL needs to switch users at start-up and write its socket and pid files.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    tmpfs: ["/tmp", "/run/postgresql"]
+    environment:
+      POSTGRES_USER: uptivora
+      POSTGRES_DB: uptivora
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [data]
+    shm_size: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uptivora -d uptivora"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["python", "-m", "app.cli", "migrate"]
+    networks: [data]
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    <<: *backend
+    networks: [edge, data]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+    networks: [edge, data]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    stop_grace_period: 30s
+
+  web:
+    <<: *hardening
+    image: ${UPTIVORA_IMAGE_PREFIX:-uptivora}/web:${UPTIVORA_VERSION}
+    environment:
+      UPTIVORA_EDITION: selfhosted
+      UPTIVORA_API_INTERNAL_URL: http://api:8000
+    tmpfs: ["/tmp", "/app/.next/cache:mode=1777"]
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+
+  caddy:
+    <<: *hardening
+    image: caddy:2-alpine
+    cap_add: [NET_BIND_SERVICE]
+    environment:
+      UPTIVORA_SITE_ADDRESS: ${UPTIVORA_SITE_ADDRESS:-${UPTIVORA_DOMAIN}}
+      UPTIVORA_TLS: ${UPTIVORA_TLS:-auto}
+    ports:
+      - "${UPTIVORA_HTTP_PORT:-80}:80"
+      - "${UPTIVORA_HTTPS_PORT:-443}:443"
+      - "${UPTIVORA_HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on: [web, api]
+
+  backup:
+    <<: *hardening
+    image: postgres:17-alpine
+    # Root inside the container, but without capabilities except writing to ./backups.
+    cap_add: [DAC_OVERRIDE]
+    entrypoint: ["/bin/sh", "/usr/local/bin/uptivora-backup"]
+    command: ["schedule"]
+    environment:
+      PGHOST: db
+      PGUSER: uptivora
+      PGDATABASE: uptivora
+      BACKUP_TIME: ${BACKUP_TIME:-02:30}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      TZ: ${TZ:-UTC}
+    secrets: [db_password]
+    volumes:
+      - ./backup.sh:/usr/local/bin/uptivora-backup:ro
+      - ./backups:/backups
+    networks: [data]
+    depends_on:
+      db: { condition: service_healthy }
+
+networks:
+  # Reverse proxy, web and API. Not internal: the worker needs outbound access.
+  edge:
+    ipam:
+      config:
+        - subnet: ${UPTIVORA_SUBNET:-10.250.47.0/24}
+  # Database traffic only — no route to the outside world.
+  data:
+    internal: true
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  db_password: { file: ./secrets/db_password }
+  secret_key: { file: ./secrets/secret_key }
+  smtp_password: { file: ./secrets/smtp_password }

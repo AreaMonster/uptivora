@@ -170,7 +170,7 @@ async def test_smtp_delivery_keeps_unsubscribe_header_literal(settings) -> None:
     base = "https://app.example.com/api/notifications/unsubscribe"
     url = f"<{base}?k=c&id={uuid.uuid4()}&t={'Z' * 32}>"
     await send_email(
-        settings, EmailMessageData(to, "🟢 RECOVERED: x", "body", None, {"List-Unsubscribe": url})
+        settings, EmailMessageData(to, "RECOVERED: x", "body", None, {"List-Unsubscribe": url})
     )
     with urlopen(f"http://localhost:8025/api/v1/search?query=to:{to}", timeout=5) as r:  # noqa: S310, ASYNC210
         msg_id = json.load(r)["messages"][0]["ID"]
