@@ -89,7 +89,7 @@ def _html(
         '<div style="font-weight:600;color:#1A1915;margin-bottom:14px;font-size:15px">'
         '<span style="color:#1F7A48">&#9679;</span> uptivora</div>'
         f'<div style="background:#FBFAF7;border:1px solid #D9D6CC;border-radius:4px;'
-        f'border-top:3px solid {accent};'
+        f"border-top:3px solid {accent};"
         'padding:26px">'
         f'<h1 style="font-size:20px;line-height:1.3;margin:0 0 14px">{escape(title)}</h1>'
         f"{body}</div>"

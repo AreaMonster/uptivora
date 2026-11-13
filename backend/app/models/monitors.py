@@ -132,6 +132,7 @@ class CheckRollup(Base):
     """Hourly aggregates used for 7/30/90-day uptime and latency charts."""
 
     __tablename__ = "check_rollups"
+    __table_args__ = (Index("ix_check_rollups_bucket_start", "bucket_start"),)
 
     monitor_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("monitors.id", ondelete="CASCADE"), primary_key=True

@@ -2,9 +2,11 @@
 
 ## Requirements
 
-- A 64-bit Linux server. 1 vCPU and 1 GB RAM handle a few hundred monitors; add 1 GB RAM per
-  ~2,000 monitors checked every minute.
-- 10 GB free disk for the database and two weeks of backups.
+- A 64-bit Linux server. 1 vCPU and 1 GB RAM handle up to ~500 monitors; in our load test
+  2 vCPU kept up with 10,000 monitors checked every minute (use 4 GB RAM at that size).
+- Disk for the database and two weeks of backups: about 35 MB per monitor checked every
+  minute (7 MB at 5-minute checks), plus 5 GB. Details in the operator documentation
+  (`docs/PERFORMANCE.md` in the source repository).
 - Docker Engine 24 or newer with the Compose plugin (`docker compose version` must work).
 - A DNS name (A and/or AAAA record) pointing at the server, for example `monitor.example.com`.
 - Ports 80 and 443 reachable from the internet, so a certificate can be issued. For an

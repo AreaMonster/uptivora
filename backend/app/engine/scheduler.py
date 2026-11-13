@@ -99,6 +99,7 @@ class Scheduler:
         self.stats = SchedulerStats()
         self._hosts = _HostLimiter(PER_HOST_CONCURRENCY)
         self._tasks: set[asyncio.Task] = set()
+        self._last_limit = 0
 
     async def claim(self, limit: int) -> list[Claim]:
         if limit <= 0:
@@ -165,7 +166,8 @@ class Scheduler:
     async def tick(self) -> int:
         """Claim as many due monitors as there is free capacity and start them."""
         free = self.concurrency - len(self._tasks)
-        claims = await self.claim(min(free, self.batch_size))
+        self._last_limit = min(free, self.batch_size)
+        claims = await self.claim(self._last_limit)
         for c in claims:
             task = asyncio.create_task(self.process(c), name=f"check-{c.id}")
             self._tasks.add(task)
@@ -180,14 +182,32 @@ class Scheduler:
             except Exception:  # noqa: BLE001 — e.g. database briefly unavailable
                 log.exception("Scheduler tick failed; retrying")
                 started = 0
-            if started >= self.batch_size and len(self._tasks) < self.concurrency:
-                continue  # backlog: claim again immediately
+            if started and started >= self._last_limit:
+                # Got everything we asked for, so more checks may be due. Claim again at once
+                # if there is room; otherwise continue as soon as a running check finishes.
+                # (Sleeping a full poll interval here left the worker idle while monitors
+                # were overdue and then started them all in one burst — see PERFORMANCE.md.)
+                if len(self._tasks) < self.concurrency:
+                    continue
+                await self._wait_for_slot(stop)
+                continue
             try:
                 await asyncio.wait_for(stop.wait(), timeout=self.poll_interval)
             except TimeoutError:
                 pass
         await self.drain()
         log.info("Scheduler %s stopped", self.worker_id)
+
+    async def _wait_for_slot(self, stop: asyncio.Event) -> None:
+        stopper = asyncio.create_task(stop.wait())
+        try:
+            await asyncio.wait(
+                {*self._tasks, stopper},
+                timeout=self.poll_interval,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        finally:
+            stopper.cancel()
 
     async def drain(self, grace_seconds: float = 30.0) -> None:
         """Let in-flight checks finish; unfinished leases expire and are retried elsewhere."""

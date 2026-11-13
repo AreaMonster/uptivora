@@ -198,3 +198,11 @@ async def test_user_agent_sent(clients, server) -> None:
     finally:
         server.httpd.RequestHandlerClass.do_GET = orig
     assert seen["ua"] == UA
+
+
+def test_sniffio_is_installed() -> None:
+    """httpcore asks sniffio for the async library on every request. If the import fails,
+    Python retries it each time and scans sys.path — measurable CPU in the worker."""
+    import sniffio
+
+    assert sniffio.current_async_library  # noqa: B018 — the import is what matters

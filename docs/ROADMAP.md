@@ -218,12 +218,27 @@ instead of an icon sidebar, ruled figures instead of KPI cards, tables instead o
 The landing page explains one real outage as a check log and the two emails it causes, and
 says plainly what the product does not do. Alert email subjects no longer carry emoji.
 
-## Phase 9 — Security and performance testing
+## Phase 9 — Security and performance testing ✅ (2026-11-13)
 
-- Threat model review; SSRF test matrix; auth/session/CSRF tests; dependency audit
-  (`pip-audit`, `npm audit`); static analysis (ruff S rules, bandit, semgrep OSS)
-- Headers/CSP verification, rate-limit verification, ZAP baseline scan (OSS)
-- Load: 10 000 monitors at 60 s on a 2 vCPU VPS; DB size projections; query plans
+Details: [SECURITY.md](SECURITY.md) and [PERFORMANCE.md](PERFORMANCE.md).
+
+- [x] Threat model (assets, actors, 20 threats with mitigations and the tests that prove them,
+      accepted risks)
+- [x] 19 new security tests: idle/absolute session expiry, server-side logout, hashed tokens,
+      no session fixation, CSRF token bound to its session, `__Host-` Secure cookie and HSTS on
+      HTTPS, mass assignment, proxy environment ignored, X-Forwarded-For spoofing, password
+      reset rate limit, no internals in errors, email header injection — no defects found
+- [x] Audits: pip-audit and `npm audit --omit=dev` clean; dev-only minimatch ReDoS fixed with
+      an override; bandit and semgrep findings reviewed (false positives, one `assert`
+      replaced)
+- [x] Web app Content-Security-Policy (no external sources), COEP/CORP, robots.txt; OWASP ZAP
+      baseline against the production stack: 0 failures, 63 passed
+- [x] Load test, 10,000 monitors at 60 s on 2 cores: found and fixed a scheduler loop that
+      idled while checks were due (138.7 → 162.1 checks/s, 1,800 → 0 late monitors) and a
+      failed `sniffio` import on every HTTP request (~15 % of the hot path)
+- [x] Query timings with 14.4 M results: admin overview 2.8 s → 0.2 s via rollups; missing
+      index on `check_rollups.bucket_start` added (migration 0004)
+- [x] Storage and backup measurements turned into sizing tables (install guide, hosted runbook)
 
 ## Phase 10 — Production-readiness review
 

@@ -475,3 +475,35 @@ async def test_flapping_monitor_stops_emailing(isolate, db, maker, settings) -> 
     assert await outbox_for(db, m.id) == []  # sixth outage within the hour: no email
     events = (await db.scalars(select(SystemEvent).where(SystemEvent.source == "alerts"))).all()
     assert any(str(m.id) in e.message for e in events)
+
+
+async def test_run_loop_keeps_working_through_a_backlog(isolate, db, maker, settings) -> None:
+    """With more due checks than free slots, the loop must start the next check as soon as a
+    slot frees up instead of sleeping a whole poll interval (Phase 9 load-test finding)."""
+    user = await make_user(db)
+    for _ in range(30):
+        await make_monitor(db, user)
+
+    async def checker(clients, spec, ua):
+        await asyncio.sleep(0.02)
+        return UP
+
+    sched = Scheduler(
+        maker,
+        settings,
+        None,
+        worker_id="w-backlog",
+        concurrency=3,
+        batch_size=3,
+        poll_interval=30.0,
+        checker=checker,
+    )
+    stop = asyncio.Event()
+    task = asyncio.create_task(sched.run(stop))
+    deadline = time.monotonic() + 15
+    while sched.stats.checks_total < 30 and time.monotonic() < deadline:  # noqa: ASYNC110
+        await asyncio.sleep(0.05)
+    stop.set()
+    await task
+    # The old loop processed 3 checks and then slept for the 30 s poll interval.
+    assert sched.stats.checks_total == 30

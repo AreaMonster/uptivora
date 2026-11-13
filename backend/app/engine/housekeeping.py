@@ -103,8 +103,9 @@ async def purge_old_data(maker: async_sessionmaker[AsyncSession], settings: Sett
         days = getattr(settings, setting)
         while True:  # small batches keep locks and WAL bursts short
             async with maker() as db, db.begin():
+                # table/column come from the constant _PURGES list above, never from input.
                 res = await db.execute(
-                    text(
+                    text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text
                         f"DELETE FROM {table} WHERE ctid IN (SELECT ctid FROM {table} "  # noqa: S608
                         f"WHERE {column} < now() - make_interval(days => :d) LIMIT :n)"
                     ),

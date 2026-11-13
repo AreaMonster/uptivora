@@ -58,7 +58,8 @@ class GuardedNetworkBackend(httpcore.AsyncNetworkBackend):
                 )
             except (httpcore.ConnectError, httpcore.ConnectTimeout) as exc:
                 last_error = exc
-        assert last_error is not None
+        if last_error is None:  # the resolver returned no address at all
+            raise httpcore.ConnectError(f"No address to connect to for {host}")
         raise last_error
 
     async def connect_unix_socket(self, *args, **kwargs):  # pragma: no cover - never allowed

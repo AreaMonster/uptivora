@@ -335,3 +335,34 @@ async def _restore_admin_free_state(db):
     # Leave no extra admins with suspended state behind for other test modules.
     await db.execute(text("UPDATE users SET is_active = true WHERE role = 'admin'"))
     await db.commit()
+
+
+async def test_overview_counts_each_check_once_across_rollups(client, db, settings) -> None:
+    """Older hours come from rollups, recent ones from raw results; rolling up must not
+    change the totals the overview reports."""
+    from app.engine import housekeeping as hk
+
+    await make_admin(client, db)
+    monitor = (await client.post("/api/monitors", json=NEW)).json()
+
+    async def totals() -> tuple[int, int]:
+        ov = (await client.get("/api/admin/overview")).json()
+        return ov["checks"]["last_24h"], sum(h["failed"] for h in ov["checks_by_hour"])
+
+    before = await totals()
+    await db.execute(
+        text(
+            "INSERT INTO check_results (monitor_id, checked_at, is_up, response_ms) "
+            "SELECT CAST(:m AS uuid), now() - interval '3 hours' + g * interval '1 minute',"
+            " g > 1, 100 "
+            "FROM generate_series(0, 6) g "
+            "UNION ALL SELECT CAST(:m AS uuid), now() - interval '5 minutes', true, 90 "
+            "FROM generate_series(1, 4)"
+        ),
+        {"m": monitor["id"]},
+    )
+    await db.commit()
+    raw_only = await totals()
+    assert raw_only == (before[0] + 11, before[1] + 2)
+    await hk.rollup_hours(get_sessionmaker(), settings)
+    assert await totals() == raw_only

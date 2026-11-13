@@ -49,14 +49,13 @@ async def overview(db: DB, settings: AppSettings) -> dict:
                count(*) FILTER (WHERE paused_reason = 'admin') AS admin_paused
           FROM monitors""",
     )
+    # The last hour is counted from raw results (index range scan on checked_at). Older hours
+    # come from the hourly rollups below, so the page stays fast with millions of results.
     checks = await _one(
         db,
         """
-        SELECT count(*) FILTER (WHERE checked_at > now() - interval '1 hour') AS last_hour,
-               count(*) FILTER (WHERE checked_at > now() - interval '1 hour' AND NOT is_up)
-                   AS failed_last_hour,
-               count(*) AS last_24h
-          FROM check_results WHERE checked_at > now() - interval '24 hours'""",
+        SELECT count(*) AS last_hour, count(*) FILTER (WHERE NOT is_up) AS failed_last_hour
+          FROM check_results WHERE checked_at > now() - interval '1 hour'""",
     )
     incidents = await _one(
         db,
@@ -78,10 +77,24 @@ async def overview(db: DB, settings: AppSettings) -> dict:
     series = (
         await db.execute(
             text("""
-        SELECT date_trunc('hour', checked_at) AS hour, count(*) AS total,
-               count(*) FILTER (WHERE NOT is_up) AS failed
-          FROM check_results WHERE checked_at > now() - interval '24 hours'
-         GROUP BY 1 ORDER BY 1""")
+        WITH cut AS (
+            SELECT coalesce(max(bucket_start) + interval '1 hour',
+                            date_trunc('hour', now() - interval '24 hours')) AS t
+              FROM check_rollups WHERE bucket_start >= now() - interval '26 hours'
+        ), parts AS (
+            SELECT bucket_start AS hour, checks_total AS total,
+                   checks_total - checks_up AS failed
+              FROM check_rollups, cut
+             WHERE bucket_start >= date_trunc('hour', now() - interval '24 hours')
+               AND bucket_start < cut.t
+            UNION ALL
+            SELECT date_trunc('hour', checked_at), count(*), count(*) FILTER (WHERE NOT is_up)
+              FROM check_results, cut
+             WHERE checked_at >= greatest(cut.t, now() - interval '24 hours')
+             GROUP BY 1
+        )
+        SELECT hour, sum(total)::bigint AS total, sum(failed)::bigint AS failed
+          FROM parts GROUP BY hour ORDER BY hour""")
         )
     ).all()
 
@@ -91,7 +104,11 @@ async def overview(db: DB, settings: AppSettings) -> dict:
         "billing_test_mode": settings.billing_test_mode,
         "users": dict(users._mapping),
         "monitors": dict(monitors._mapping),
-        "checks": {**dict(checks._mapping), "per_minute": round(checks.last_hour / 60, 1)},
+        "checks": {
+            **dict(checks._mapping),
+            "last_24h": sum(r.total for r in series),
+            "per_minute": round(checks.last_hour / 60, 1),
+        },
         "incidents": dict(incidents._mapping),
         "emails": dict(outbox._mapping),
         "checks_by_hour": [

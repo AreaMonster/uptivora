@@ -109,3 +109,5 @@ ALLOW_DIRTY=1 deploy/release/build.sh     # images + dist/uptivora-selfhosted-<v
 * [Database schema](docs/DATABASE.md)
 * [Roadmap](docs/ROADMAP.md)
 * [Licence key operations](docs/LICENSE_KEY_OPERATIONS.md)
+* [Security: threat model and test results](docs/SECURITY.md)
+* [Performance and sizing](docs/PERFORMANCE.md)
