@@ -16,6 +16,7 @@ from app.billing.service import process_due_subscriptions
 from app.core import eventlog, ratelimit
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
+from app.enforcement import enforce_instance_job
 from app.engine import housekeeping as hk
 from app.engine.netclient import build_clients
 from app.engine.scheduler import Scheduler, new_worker_id
@@ -111,6 +112,16 @@ async def run() -> None:
                 initial_delay=30,
             )
             if settings.is_hosted
+            else asyncio.sleep(0),
+            # Self-hosted: apply licence limits, e.g. after a licence file was added or removed.
+            _periodic(
+                "licence-limits",
+                300,
+                lambda: enforce_instance_job(maker, settings),
+                stop,
+                initial_delay=15,
+            )
+            if not settings.is_hosted
             else asyncio.sleep(0),
         )
     finally:

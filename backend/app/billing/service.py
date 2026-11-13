@@ -28,10 +28,7 @@ from app.core.config import Settings
 from app.core.errors import AppError, Conflict
 from app.limits import PAST_DUE_GRACE, limits_for, live_subscription
 from app.models import (
-    Monitor,
-    MonitorStatus,
     NotificationKind,
-    PausedReason,
     Payment,
     PaymentStatus,
     Plan,
@@ -543,52 +540,11 @@ async def process_due_subscriptions(
 
 
 async def rebalance_monitors(db: AsyncSession, settings: Settings, user: User) -> dict[str, int]:
-    """Pause monitors over the limit (newest first) or resume plan-limit pauses (oldest first).
-    Also raises intervals that are faster than the plan allows. Never deletes anything."""
+    """Keep the user's monitors within their plan (see :mod:`app.enforcement`)."""
+    from app.enforcement import enforce_limits
+
     limits = await limits_for(db, settings, user)
-    if limits.scope != "user":
-        return {"paused": 0, "resumed": 0}
-    active = list(
-        (
-            await db.scalars(
-                select(Monitor)
-                .where(Monitor.owner_id == user.id, Monitor.is_paused.is_(False))
-                .order_by(Monitor.created_at)
-            )
-        ).all()
-    )
-    paused = resumed = 0
-    cap = limits.max_monitors
-    if cap is not None and len(active) > cap:
-        for m in reversed(active[cap:]):
-            m.is_paused = True
-            m.paused_reason = PausedReason.PLAN_LIMIT
-            m.status = MonitorStatus.PAUSED
-            m.lease_owner = m.lease_until = None
-            paused += 1
-        active = active[:cap]
-    elif cap is None or len(active) < cap:
-        room = None if cap is None else cap - len(active)
-        stmt = (
-            select(Monitor)
-            .where(Monitor.owner_id == user.id, Monitor.paused_reason == PausedReason.PLAN_LIMIT)
-            .order_by(Monitor.created_at)
-        )
-        if room is not None:
-            stmt = stmt.limit(room)
-        for m in (await db.scalars(stmt)).all():
-            m.is_paused = False
-            m.paused_reason = None
-            m.status = MonitorStatus.PENDING
-            m.consecutive_failures = m.consecutive_successes = 0
-            m.next_check_at = datetime.now(UTC)
-            active.append(m)
-            resumed += 1
-    for m in active:
-        if m.interval_seconds < limits.min_interval_seconds:
-            m.interval_seconds = limits.min_interval_seconds
-    await db.flush()
-    return {"paused": paused, "resumed": resumed}
+    return await enforce_limits(db, limits, owner_id=user.id if limits.scope == "user" else None)
 
 
 async def payment_history(db: AsyncSession, user: User, limit: int = 24) -> list[Payment]:

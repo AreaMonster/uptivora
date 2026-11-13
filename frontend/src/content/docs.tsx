@@ -154,8 +154,14 @@ cp ~/Downloads/your.uptivora-license license/uptivora.license
 docker compose up -d`}</Code>
         <p>
           Open your domain in a browser: the first account you create becomes the administrator.
-          The full step-by-step guide ships with the release bundle.
+          The admin overview then shows a short setup checklist.
         </p>
+        <h2>Licence and team</h2>
+        <ul>
+          <li>Install your licence under <strong>Admin → Licence</strong> (upload or paste the file), or place it at the path set in <code>UPTIVORA_LICENSE_PATH</code>.</li>
+          <li>Invite colleagues under <strong>Admin → Users</strong>. They receive an email to choose a password. Invited accounts count towards your licence’s user limit.</li>
+          <li>Alternatively, switch on open sign-up under <strong>Admin → System</strong>.</li>
+        </ul>
         <h2>No outbound dependencies</h2>
         <p>
           A self-hosted installation only connects to the websites you monitor and to your SMTP

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -56,3 +57,48 @@ async def licence_status(db: AsyncSession, settings: Settings) -> LicenceStatus:
     except LicenseError as exc:
         log.warning("Installed licence rejected (%s): %s", exc.code, exc.message)
         return LicenceStatus(None, source, exc.message)
+
+
+# --- installation through the admin dashboard ------------------------------------------------
+
+
+async def install_licence(
+    db: AsyncSession, settings: Settings, raw: str, *, installed_by: uuid.UUID | None = None
+) -> License:
+    """Verify and activate a licence. Earlier licences stay as inactive history.
+
+    Raises :class:`LicenseError` for invalid files (nothing is changed then).
+    """
+    text = raw.strip() + "\n"
+    lic = verify_cached(text, settings)
+    await db.execute(
+        update(InstalledLicense).where(InstalledLicense.is_active.is_(True)).values(is_active=False)
+    )
+    await db.flush()
+    existing = await db.scalar(
+        select(InstalledLicense).where(InstalledLicense.license_id == uuid.UUID(lic.license_id))
+    )
+    if existing is not None:  # re-installing the same licence re-activates it
+        existing.is_active = True
+        existing.raw_text = text
+    else:
+        db.add(
+            InstalledLicense(
+                license_id=uuid.UUID(lic.license_id),
+                edition=lic.edition.value,
+                licensee_name=lic.licensee_name,
+                raw_text=text,
+                installed_by=installed_by,
+            )
+        )
+    await db.flush()
+    return lic
+
+
+async def deactivate_licence(db: AsyncSession) -> int:
+    """Go back to evaluation mode (the licence stays in the history)."""
+    result = await db.execute(
+        update(InstalledLicense).where(InstalledLicense.is_active.is_(True)).values(is_active=False)
+    )
+    await db.flush()
+    return result.rowcount or 0

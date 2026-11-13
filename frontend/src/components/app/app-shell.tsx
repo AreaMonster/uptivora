@@ -147,6 +147,14 @@ function Frame({ children }: { children: ReactNode }) {
       <div className="border-t border-line p-4">
         <p className="truncate text-sm font-medium">{me.user.full_name || me.user.email}</p>
         <p className="truncate text-xs text-fg-subtle">{me.user.email}</p>
+        {me.limits.source === "licence" && me.limits.licensee && (
+          <p className="mt-2 truncate text-[11px] text-fg-subtle" title="Self-hosted licence">
+            Licensed to {me.limits.licensee}
+          </p>
+        )}
+        {me.limits.source === "unlicensed" && (
+          <p className="mt-2 text-[11px] text-warn/90">Evaluation mode — no licence installed</p>
+        )}
         <button
           type="button"
           onClick={signOut}

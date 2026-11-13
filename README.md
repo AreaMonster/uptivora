@@ -52,7 +52,8 @@ cd frontend && npm install && npm run dev
 ```
 
 Open http://localhost:3000. The dev seed creates `demo@example.com` and the administrator `admin@example.com`
-(passwords in `backend/app/devseed.py`; admin area at `/admin`). Captured emails: http://localhost:8025.
+(passwords in `backend/app/devseed.py`; admin area at `/admin`).
+The frontend npm scripts run Next.js with telemetry disabled (`frontend/scripts/next.mjs`). Captured emails: http://localhost:8025.
 
 Monitoring worker (runs the checks, sends emails, housekeeping):
 
@@ -65,6 +66,28 @@ Tests:
 ```bash
 cd backend && .venv/Scripts/python -m pytest -q
 ```
+
+### Trying the self-hosted edition locally
+
+Run a second instance with its own database (127.0.0.1 keeps its cookies apart from localhost):
+
+```bash
+docker exec uptivora-dev-db-1 createdb -U uptivora uptivora_selfhosted
+```
+
+```bash
+cd backend && export UPTIVORA_ENV=development UPTIVORA_EDITION=selfhosted UPTIVORA_BILLING_PROVIDER=disabled UPTIVORA_DATABASE_URL=postgresql+asyncpg://uptivora:uptivora@localhost:5433/uptivora_selfhosted UPTIVORA_PUBLIC_URL=http://127.0.0.1:3001 && .venv/Scripts/alembic upgrade head && .venv/Scripts/python -m uvicorn app.main:app --port 8001
+```
+
+Start a worker with the same variables (`python -m app.worker`), then the web app:
+
+```bash
+cd frontend && UPTIVORA_API_INTERNAL_URL=http://localhost:8001 npm run build && UPTIVORA_EDITION=selfhosted npm run start -- -p 3001 -H 127.0.0.1
+```
+
+Open http://127.0.0.1:3001 — the first account becomes the administrator. Test licences:
+`python -m licensegen issue --key ../../backend/.dev-keys/dev-private.pem --key-id dev ...`
+in `tools/licensegen`.
 
 ## Documentation
 

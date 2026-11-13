@@ -45,6 +45,7 @@ def _user_row(u: User, plan_name: str | None, sub_status: str | None, monitors: 
         "role": u.role,
         "is_active": u.is_active,
         "email_verified": u.email_verified_at is not None,
+        "pending_invite": u.password_hash.startswith("!pending-invitation:"),
         "created_at": u.created_at.isoformat(),
         "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
         "plan": plan_name,

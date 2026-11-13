@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import text
 
 from app.auth import service
 from app.auth.deps import DB, AppSettings, CurrentUser
@@ -18,8 +18,8 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.limits import limits_for, monitor_usage
-from app.models import AppSetting, AuthTokenPurpose, User, UserRole
+from app.limits import instance_limits, limits_for, monitor_usage
+from app.models import AppSetting, AuthTokenPurpose, UserRole
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -109,13 +109,15 @@ async def _registration_allowed(db, settings) -> tuple[bool, str]:
     """Hosted: open sign-up. Self-hosted: first user becomes admin; then admin-controlled."""
     if settings.is_hosted:
         return True, UserRole.USER
+    # Serialise self-hosted sign-ups until commit: two people opening a fresh installation at
+    # the same moment must not both become administrator, nor exceed the licence's user limit.
+    await db.execute(text("SELECT pg_advisory_xact_lock(hashtext('uptivora.registration'))"))
     if await service.count_users(db) == 0:
         return True, UserRole.ADMIN
     setting = await db.get(AppSetting, "public_signup")
     if not (setting and setting.value is True):
         return False, UserRole.USER
-    limits_user = await db.scalar(select(User).where(User.role == UserRole.ADMIN).limit(1))
-    limits = await limits_for(db, settings, limits_user)
+    limits = await instance_limits(db, settings)
     if limits.max_users is not None and await service.count_users(db) >= limits.max_users:
         return False, UserRole.USER
     return True, UserRole.USER
@@ -257,3 +259,37 @@ async def reset_password(
     audit(db, "auth.password_reset", actor_id=user.id, ip=client_ip(request))
     await db.commit()
     return {"status": "password_changed"}
+
+
+class AcceptInviteIn(TokenIn):
+    password: str = Field(max_length=256)
+    full_name: str = Field(default="", max_length=120)
+
+
+@router.post("/accept-invite")
+async def accept_invite(
+    body: AcceptInviteIn, request: Request, response: Response, db: DB, settings: AppSettings
+) -> dict:
+    """Self-hosted invitations: choose a password, confirm the email and sign in."""
+    from app.selfhosted.invites import is_pending
+
+    ip = client_ip(request)
+    await ratelimit.hit("invite:ip", ip, limit=20, window_seconds=3600)
+    user = await service.consume_token(db, body.token, AuthTokenPurpose.INVITE)
+    if user is None or not is_pending(user):
+        raise AppError("This invitation is invalid, expired or already used.", code="invalid_token")
+    _check_policy(body.password, user.email)
+    user.password_hash = hash_password(body.password)
+    if body.full_name.strip():
+        user.full_name = " ".join(body.full_name.split())
+    user.email_verified_at = datetime.now(UTC)  # the link proved control of the inbox
+    user.last_login_at = datetime.now(UTC)
+    token, session = await service.create_session(
+        db, settings, user, ip=ip, user_agent=user_agent(request)
+    )
+    audit(
+        db, "user.invite_accepted", actor_id=user.id, ip=ip, target_type="user", target_id=user.id
+    )
+    await db.commit()
+    _set_session_cookie(response, settings, token)
+    return await me_payload(db, settings, service.AuthContext(user, session))

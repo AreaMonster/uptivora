@@ -26,6 +26,7 @@ from app.incidents.router import router as incidents_router
 from app.monitors.router import router as monitors_router
 from app.notifications.router import router as notifications_router
 from app.public.router import router as public_router
+from app.selfhosted.router import router as selfhosted_router
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 SECURITY_HEADERS = {
@@ -126,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_catalog.router)
     app.include_router(admin_billing.router)
     app.include_router(billing_router)
+    app.include_router(selfhosted_router)
     if settings.env in admin_devtools.DEV_ENVIRONMENTS:  # never mounted in production
         app.include_router(admin_devtools.router)
     return app

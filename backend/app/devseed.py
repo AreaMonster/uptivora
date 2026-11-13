@@ -6,7 +6,7 @@ can be explored before real checks exist. Refuses to run outside development.
 Demo login: demo@example.com / value of UPTIVORA_DEV_DEMO_PASSWORD
 (default: ``uptivora-demo-password``).
 Admin login: admin@example.com / value of UPTIVORA_DEV_ADMIN_PASSWORD
-(default: ``uptivora-admin-password``). Development databases only.
+(default: ``uptivora-dev-operator-2026``). Development databases only.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from app.models import (
 DEMO_EMAIL = "demo@example.com"
 DEMO_PASSWORD = os.environ.get("UPTIVORA_DEV_DEMO_PASSWORD", "uptivora-demo-password")
 ADMIN_EMAIL = "admin@example.com"
-ADMIN_PASSWORD = os.environ.get("UPTIVORA_DEV_ADMIN_PASSWORD", "uptivora-admin-password")
+ADMIN_PASSWORD = os.environ.get("UPTIVORA_DEV_ADMIN_PASSWORD", "uptivora-dev-operator-2026")
 
 SITES = [
     ("Online shop", "https://shop.example.com/", 180, None),

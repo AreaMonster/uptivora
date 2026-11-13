@@ -78,6 +78,7 @@ export type AdminUserRow = {
   role: "user" | "admin";
   is_active: boolean;
   email_verified: boolean;
+  pending_invite: boolean;
   created_at: string;
   last_login_at: string | null;
   plan: string | null;

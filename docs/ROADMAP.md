@@ -158,13 +158,31 @@ licence store end to end, Stripe signatures, webhook idempotency, nothing delete
 Not yet: real payment provider (requires a merchant account — Stripe adapter is a stub),
 VAT handling and invoices as PDF (Phase 10 / legal review).
 
-## Phase 7 — Self-hosted edition and offline licence verification
+## Phase 7 — Self-hosted edition and offline licence verification ✅ (2026-11-13)
 
-- First-run setup wizard (create owner admin), invitations, public sign-up toggle
-- Licence install (file in volume or upload in admin), status page, licensee shown in footer
-- Unlicensed evaluation limits; over-limit monitors paused (never deleted)
-- Verify there are **zero** outbound connections other than monitored sites and SMTP
-  (test that runs the stack with egress blocked)
+- [x] First run: the first account becomes administrator ("Set up your installation");
+      sign-ups are serialised with a Postgres advisory lock, so two simultaneous first
+      registrations can never both become admin (tested)
+- [x] Licence installation in the admin dashboard (upload or paste, verified offline before it
+      is stored, history kept) or as a file (`UPTIVORA_LICENSE_PATH`, takes precedence);
+      licence page with licensee, edition, "never expires", limits vs. usage, dev-key warning
+- [x] Installation-wide limit enforcement (`app/enforcement.py`): on install/remove/replace and
+      every 5 minutes in the worker — newest monitors over the limit paused, resumed when there
+      is room, intervals raised; nothing deleted
+- [x] Invitations: admin invites by email (user/admin), pending accounts count towards the
+      licence user limit and cannot sign in, single-use 7-day link to choose a password
+      (confirms the email), resend/revoke; open sign-up toggle stays available
+- [x] Setup checklist on the admin overview (worker, SMTP, licence, first monitor, team)
+- [x] Licensee / evaluation mode shown in the app sidebar; no billing UI in self-hosted
+- [x] No phone home: static test (network clients only in the checker and mailer, no
+      trackers/analytics/external fonts in the frontend), runtime test recording every
+      outbound connection during a full self-hosted session (only the local database), and
+      Next.js build telemetry disabled for every npm script (`frontend/scripts/next.mjs`)
+- [x] Fixed: the dev seed's admin password violated the app's own password policy
+- [x] Verified in a separate self-hosted instance (own database, API, worker and production
+      web build): setup, evaluation banner, licence install, invitation via Mailpit, accept
+
+Tests: 275 backend tests (+12).
 
 ## Phase 8 — Docker deployment and documentation
 

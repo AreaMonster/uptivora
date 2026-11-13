@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   FlaskConical,
   Gauge,
+  KeyRound,
   Layers,
   Menu,
   Radar,
@@ -23,7 +24,14 @@ import { api, type PublicConfig } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/format";
 
-type NavItem = { href: string; label: string; icon: typeof Gauge; hostedOnly?: boolean; devOnly?: boolean };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Gauge;
+  hostedOnly?: boolean;
+  selfHostedOnly?: boolean;
+  devOnly?: boolean;
+};
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: Gauge },
@@ -31,6 +39,7 @@ const NAV: NavItem[] = [
   { href: "/admin/monitors", label: "Monitors", icon: Radar },
   { href: "/admin/plans", label: "Plans & pricing", icon: Layers, hostedOnly: true },
   { href: "/admin/billing", label: "Billing & licences", icon: Receipt, hostedOnly: true },
+  { href: "/admin/licence", label: "Licence", icon: KeyRound, selfHostedOnly: true },
   { href: "/admin/system", label: "System", icon: Server },
   { href: "/admin/logs", label: "Logs", icon: ScrollText },
   { href: "/admin/dev", label: "Dev tools", icon: FlaskConical, devOnly: true },
@@ -83,6 +92,7 @@ function useConfig(): PublicConfig | null {
 function AdminNav({ config, onNavigate }: { config: PublicConfig | null; onNavigate?: () => void }) {
   const pathname = usePathname();
   const items = NAV.filter((n) => (!n.hostedOnly || config?.edition === "hosted")
+    && (!n.selfHostedOnly || config?.edition === "selfhosted")
     && (!n.devOnly || (config && config.environment !== "production")));
   return (
     <>

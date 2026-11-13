@@ -359,3 +359,17 @@ def licence_ready(product: str, link: str, is_test: bool) -> RenderedEmail:
         _text(title, paras, link),
         _html(title, paras, ("Download licence", link), tone="up"),
     )
+
+
+def invitation(inviter: str, url: str) -> RenderedEmail:
+    title = "You have been invited to Uptivora"
+    paras = [
+        f"{inviter} invited you to their Uptivora installation, where your team monitors its "
+        "websites.",
+        "Choose a password to activate your account. The link is valid for 7 days.",
+    ]
+    return RenderedEmail(
+        _clean_subject(f"{inviter} invited you to Uptivora"),
+        _text(title, paras, url),
+        _html(title, paras, ("Accept invitation", url)),
+    )

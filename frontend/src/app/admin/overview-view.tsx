@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Alert, Badge, PageHeader, Skeleton } from "@/components/ui";
+import { SetupChecklist } from "@/components/admin/invitations";
 import type { AdminHealth, AdminOverview, SystemEventRow } from "@/lib/admin-types";
 import { cn, formatDuration, formatMoney, formatNumber, timeAgo } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
@@ -55,6 +56,7 @@ export function AdminOverviewView() {
   return (
     <>
       <PageHeader title="Overview" description={`${ov.edition === "hosted" ? "Hosted" : "Self-hosted"} edition · ${ov.environment}`} />
+      {ov.edition === "selfhosted" && <SetupChecklist />}
 
       {health && (
         <Link href="/admin/system" className="mb-6 block">

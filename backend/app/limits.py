@@ -78,6 +78,11 @@ async def limits_for(db: AsyncSession, settings: Settings, user: User) -> Limits
             plan.max_monitors, plan.min_interval_seconds, 1, "user", "plan", plan.code, plan.name
         )
 
+    return await instance_limits(db, settings)
+
+
+async def instance_limits(db: AsyncSession, settings: Settings) -> Limits:
+    """Self-hosted: limits of the whole installation, from the installed licence."""
     status = await licence_status(db, settings)
     if status.licence is None:
         lim = UNLICENSED_LIMITS

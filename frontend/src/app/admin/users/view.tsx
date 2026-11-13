@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { Alert, Badge, Button, PageHeader, Skeleton } from "@/components/ui";
+import { Invitations } from "@/components/admin/invitations";
 import type { AdminUserRow, Paged } from "@/lib/admin-types";
 import { cn, timeAgo } from "@/lib/format";
 import { useApi } from "@/lib/use-api";
@@ -30,12 +31,13 @@ export function UsersView() {
 
   const params = new URLSearchParams({ status, page: String(page), page_size: "25" });
   if (q) params.set("q", q);
-  const { data, error } = useApi<Paged<AdminUserRow>>(`/api/admin/users?${params}`);
+  const { data, error, reload } = useApi<Paged<AdminUserRow>>(`/api/admin/users?${params}`);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
 
   return (
     <>
       <PageHeader title="Users" description={data ? `${data.total} matching accounts` : undefined} />
+      <Invitations onChanged={() => void reload()} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
           <span className="sr-only">Search users</span>
@@ -84,7 +86,7 @@ export function UsersView() {
                       <span className="flex flex-wrap gap-1">
                         {u.is_active ? <Badge tone="up">Active</Badge> : <Badge tone="down">Suspended</Badge>}
                         {u.role === "admin" && <Badge tone="warn">Admin</Badge>}
-                        {!u.email_verified && <Badge>Unconfirmed</Badge>}
+                        {u.pending_invite ? <Badge tone="warn">Invited</Badge> : !u.email_verified && <Badge>Unconfirmed</Badge>}
                       </span>
                     </td>
                     <td className="hidden whitespace-nowrap px-2 py-3 text-fg-muted lg:table-cell">{timeAgo(u.created_at)}</td>

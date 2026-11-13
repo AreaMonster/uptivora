@@ -46,5 +46,5 @@ select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
 ignore = ["S101"]  # asserts are fine in tests
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "S106", "S104"]
+"tests/*" = ["S105", "S106", "S104", "F811"]  # F811: pytest fixtures used as parameters
 "alembic/versions/*" = ["E501"]
