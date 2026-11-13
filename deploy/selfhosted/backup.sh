@@ -23,7 +23,9 @@ dump_now() {
 	umask 077
 	ts="$(date -u +%Y%m%dT%H%M%SZ)"
 	part="$DIR/.uptivora-$ts.dump.partial"
-	pg_dump --format=custom --compress=6 --no-owner --no-privileges --file="$part"
+	# zstd: about a third of the size of gzip for this data (PostgreSQL 16+; restores of
+	# older gzip dumps keep working, pg_restore detects the format).
+	pg_dump --format=custom --compress=zstd:9 --no-owner --no-privileges --file="$part"
 	mv "$part" "$DIR/uptivora-$ts.dump"
 	log "wrote uptivora-$ts.dump ($(du -h "$DIR/uptivora-$ts.dump" | cut -f1))"
 	find "$DIR" -maxdepth 1 -type f -name 'uptivora-*.dump' -mtime +"$KEEP_DAYS" -print -delete |

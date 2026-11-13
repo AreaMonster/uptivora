@@ -43,13 +43,13 @@ def next_check_time(now: datetime, interval: int, *, confirming: bool) -> dateti
 
 
 async def _first_failure_time(
-    db: AsyncSession, monitor_id: uuid.UUID, failures: int, fallback: datetime
+    db: AsyncSession, monitor_seq: int, failures: int, fallback: datetime
 ) -> datetime:
     if failures <= 1:
         return fallback
     ts = await db.scalar(
         select(CheckResult.checked_at)
-        .where(CheckResult.monitor_id == monitor_id)
+        .where(CheckResult.monitor_seq == monitor_seq)
         .order_by(CheckResult.checked_at.desc())
         .offset(failures - 1)
         .limit(1)
@@ -79,14 +79,13 @@ async def apply_outcome(
 
         db.add(
             CheckResult(
-                monitor_id=m.id,
+                monitor_seq=m.seq,
                 checked_at=now,
                 is_up=outcome.is_up,
                 status_code=outcome.status_code,
                 response_ms=outcome.response_ms,
                 error_kind=outcome.error_kind,
                 error_message=(outcome.error_message or None) and outcome.error_message[:500],
-                worker_id=worker_id,
             )
         )
         await db.flush()
@@ -123,7 +122,7 @@ async def apply_outcome(
         m.lease_owner = m.lease_until = None
 
         if t.event == "down":
-            started = await _first_failure_time(db, m.id, t.consecutive_failures, now)
+            started = await _first_failure_time(db, m.seq, t.consecutive_failures, now)
             incident = await db.scalar(
                 select(Incident).where(Incident.monitor_id == m.id, Incident.resolved_at.is_(None))
             )

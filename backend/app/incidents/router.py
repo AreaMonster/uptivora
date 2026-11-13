@@ -8,13 +8,13 @@ from typing import Literal
 
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, or_, select
+from sqlalchemy import or_, select, union_all
 
 from app.auth.deps import DB, CurrentUser
 from app.core.audit import audit
 from app.core.errors import NotFound
 from app.core.requestctx import client_ip
-from app.models import CheckResult, Incident, Monitor, NotificationOutbox, User
+from app.models import CheckResult, Incident, Monitor, NotificationOutbox, RetainedCheck, User
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 MAX_TIMELINE_CHECKS = 300
@@ -120,19 +120,26 @@ async def incident_detail(incident_id: uuid.UUID, ctx: CurrentUser, db: DB) -> d
     # Checks from shortly before the outage until shortly after it ended.
     window_start = incident.started_at - timedelta(seconds=monitor.interval_seconds * 2)
     window_end = end + timedelta(seconds=monitor.interval_seconds * 2)
-    checks = (
-        await db.scalars(
-            select(CheckResult)
-            .where(
-                and_(
-                    CheckResult.monitor_id == monitor.id,
-                    CheckResult.checked_at >= window_start,
-                    CheckResult.checked_at <= window_end,
-                )
-            )
-            .order_by(CheckResult.checked_at)
-            .limit(MAX_TIMELINE_CHECKS)
+
+    # Recent days come from check_results; older incidents from retained_checks, which keeps
+    # failed checks and the checks around every incident after the raw data has expired.
+    def window(table):
+        return select(
+            table.checked_at,
+            table.is_up,
+            table.status_code,
+            table.response_ms,
+            table.error_kind,
+            table.error_message,
+        ).where(
+            table.monitor_seq == monitor.seq,
+            table.checked_at >= window_start,
+            table.checked_at <= window_end,
         )
+
+    both = union_all(window(CheckResult), window(RetainedCheck)).subquery()
+    checks = (
+        await db.execute(select(both).order_by(both.c.checked_at).limit(MAX_TIMELINE_CHECKS))
     ).all()
     notifications = (
         await db.scalars(

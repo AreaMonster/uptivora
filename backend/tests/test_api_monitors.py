@@ -3,9 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 
-from app.models import CheckResult, CheckRollup, Incident, User, UserRole
+from app.models import CheckResult, CheckRollup, Incident, Monitor, User, UserRole
 from tests.conftest import give_plan, register
 
 NEW = {"name": "Shop", "url": "https://shop.example.com", "interval_seconds": 300}
@@ -148,12 +148,13 @@ async def test_admin_has_no_plan_limits(client, db) -> None:
 async def test_statistics_and_incidents(client, db) -> None:
     await _with_plan(client, db, "pro")
     mid = uuid.UUID((await client.post("/api/monitors", json=NEW)).json()["id"])
+    seq = await db.scalar(select(Monitor.seq).where(Monitor.id == mid))
     now = datetime.now(UTC)
     # 24 h: 9 up + 1 down -> 90 %
     for i in range(10):
         db.add(
             CheckResult(
-                monitor_id=mid,
+                monitor_seq=seq,
                 checked_at=now - timedelta(minutes=10 * i + 1),
                 is_up=i != 3,
                 status_code=200 if i != 3 else 503,
@@ -163,7 +164,7 @@ async def test_statistics_and_incidents(client, db) -> None:
     # Older data only in rollups (raw purged): 40 days ago, 100 checks, 50 up
     db.add(
         CheckRollup(
-            monitor_id=mid,
+            monitor_seq=seq,
             bucket_start=(now - timedelta(days=40)).replace(minute=0, second=0, microsecond=0),
             checks_total=100,
             checks_up=50,

@@ -162,13 +162,16 @@ Postgres advisory lock so that only one worker performs it.
 ### 4.5 Data retention & uptime history
 
 `check_results` is the high-volume table (50 monitors × 1/min ≈ 72k rows/day per Business
-customer). Strategy:
+customer). Strategy (sizes in [PERFORMANCE.md](PERFORMANCE.md)):
 
-* Raw results kept 30 days (configurable), deleted daily in batches.
+* `check_results` is partitioned by UTC day and keeps every check for 3 days
+  (`raw_retention_days`). Rows are lean: monitor number (`monitors.seq`, 4 bytes), time,
+  result; BRIN index on time, B-tree on (monitor, time).
+* An expired day is rolled up once more, its failed checks and the checks around incidents
+  move to `retained_checks` (30 days), then the partition is dropped.
 * Hourly rollups (`check_rollups`: total, up, avg/min/max/p95 latency) kept 400 days.
-* Uptime % for 24 h uses raw data; 7/30/90-day charts read rollups. Incidents are kept forever.
-* Native partitioning is deliberately postponed (risk R4) — batch deletes on an index of
-  `(checked_at)` are sufficient below ~50M rows.
+* Uptime % for 24 h uses raw data; 7/30/90-day uptime and charts read rollups. Incident
+  timelines read raw and retained checks. Incidents are kept forever.
 
 ### 4.6 Email
 
@@ -227,7 +230,7 @@ Secrets via Docker secrets / `*_FILE` env vars. Database migrations run as a one
 | R1 | **SSRF / internal network access** through customer URLs | Critical — cloud metadata theft, internal scanning | Socket-layer guard (§4.3), redirect re-validation, egress firewall, dedicated tests incl. rebinding. |
 | R2 | **Licence piracy** — an offline licence cannot be revoked and the check can be patched out of the source | Revenue loss | Accept it: offline + source-available means a determined user can always bypass. Make the honest path easy, put licensee name visibly in the UI, sell updates/support. Do not add DRM that hurts paying customers. |
 | R3 | **Private signing key compromise** | Anyone can mint licences | Key lives only offline (encrypted PKCS#8, passphrase). `key_id` in every licence + list of trusted public keys allows rotation; documented incident procedure. |
-| R4 | `check_results` growth | Disk, slow queries | Hourly rollups + retention job; partitioning as a later upgrade path. |
+| R4 | `check_results` growth | Disk, slow queries | Daily partitions dropped after 3 days, lean rows, hourly rollups (Phase 9: ~90 % less disk). |
 | R5 | **False positives / alert noise** from one vantage point | Customer churn | Confirmation re-check, thresholds, timeouts tuned; multi-location checks are a roadmap item (a second cheap VPS running another worker). |
 | R6 | No Redis → rate limits and scheduling hit Postgres | Load at scale | Fine to ~10–20k monitors on one box. Interfaces are abstracted so Redis can be added later if needed. |
 | R7 | **Outbound IP reputation / abuse** — customers use the monitor to hammer third parties | Hosting provider complaints | Minimum interval per plan (≥ 30 s), per-host concurrency cap, identifiable User-Agent with a contact URL, admin can suspend monitors. |

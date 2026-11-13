@@ -182,8 +182,10 @@ async def run(args) -> dict:
         size = (
             await db.execute(
                 text(
-                    "SELECT count(*) AS n, pg_total_relation_size('check_results') AS bytes,"
-                    " pg_relation_size('check_results') AS heap FROM check_results"
+                    "SELECT (SELECT count(*) FROM check_results) AS n,"
+                    " sum(pg_total_relation_size(inhrelid)) AS bytes,"
+                    " sum(pg_relation_size(inhrelid)) AS heap"
+                    " FROM pg_inherits WHERE inhparent = 'check_results'::regclass"
                 )
             )
         ).one()

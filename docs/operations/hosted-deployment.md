@@ -8,12 +8,12 @@ The hosted service runs the same images as the self-hosted bundle with
 
 Measured in Phase 9 ([../PERFORMANCE.md](../PERFORMANCE.md)): one worker process keeps up with
 10,000 monitors at 60 s using under half a CPU core; PostgreSQL adds about a quarter core.
-Disk, not CPU, is the limit: ~214 bytes per stored check plus backups.
+Storage: ~3.5 MB per monitor at 60 s including 14 backups, after 400 days.
 
 | Load | Server |
 | --- | --- |
-| up to ~2,000 monitors at 60 s | 2 vCPU, 4 GB RAM, 80 GB SSD |
-| up to ~10,000 monitors at 60 s | 2–4 vCPU, 8 GB RAM, 120 GB SSD with `UPTIVORA_RAW_RETENTION_DAYS=7` and `BACKUP_KEEP_DAYS=7` (backups copied off-site) |
+| up to ~2,000 monitors at 60 s | 2 vCPU, 4 GB RAM, 40 GB SSD |
+| up to ~10,000 monitors at 60 s | 2–4 vCPU, 8 GB RAM, 80 GB SSD |
 
 ## First deployment
 

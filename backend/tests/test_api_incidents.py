@@ -3,7 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.models import CheckResult, Incident, NotificationKind, NotificationOutbox, OutboxStatus
+from sqlalchemy import select
+
+from app.models import (
+    CheckResult,
+    Incident,
+    Monitor,
+    NotificationKind,
+    NotificationOutbox,
+    OutboxStatus,
+)
 from tests.conftest import give_plan, register
 
 NEW = {"name": "Checkout", "url": "https://checkout.example.com", "interval_seconds": 60}
@@ -13,6 +22,7 @@ async def _setup(client, db) -> tuple[uuid.UUID, list[uuid.UUID]]:
     me = await register(client)
     await give_plan(db, me["user"]["id"], "pro")
     mid = uuid.UUID((await client.post("/api/monitors", json=NEW)).json()["id"])
+    seq = await db.scalar(select(Monitor.seq).where(Monitor.id == mid))
     now = datetime.now(UTC)
     old = Incident(
         monitor_id=mid,
@@ -36,7 +46,7 @@ async def _setup(client, db) -> tuple[uuid.UUID, list[uuid.UUID]]:
         down = 4 <= i < 14 and t < mid_.resolved_at
         db.add(
             CheckResult(
-                monitor_id=mid,
+                monitor_seq=seq,
                 checked_at=t,
                 is_up=not down,
                 status_code=None if down else 200,
@@ -130,3 +140,29 @@ async def test_incidents_are_private(client, make_client, db) -> None:
     assert (await other.patch(f"/api/incidents/{open_id}", json={"note": "x"})).status_code == 404
     assert (await other.get("/api/incidents")).json()["items"] == []
     assert (await other.get("/api/incidents/summary")).json()["total"] == 0
+
+
+async def test_old_incident_timeline_comes_from_retained_checks(client, db) -> None:
+    from app.models import RetainedCheck
+
+    me = await register(client)
+    await give_plan(db, me["user"]["id"], "pro")
+    mid = uuid.UUID((await client.post("/api/monitors", json=NEW)).json()["id"])
+    seq = await db.scalar(select(Monitor.seq).where(Monitor.id == mid))
+    start = datetime.now(UTC) - timedelta(days=12)
+    incident = Incident(
+        monitor_id=mid, started_at=start, resolved_at=start + timedelta(minutes=10), cause="503"
+    )
+    db.add(incident)
+    db.add_all(
+        RetainedCheck(
+            monitor_seq=seq,
+            checked_at=start + timedelta(minutes=5 * i),
+            is_up=i == 2,
+            status_code=200 if i == 2 else 503,
+        )
+        for i in range(3)
+    )
+    await db.commit()
+    body = (await client.get(f"/api/incidents/{incident.id}")).json()
+    assert [c["is_up"] for c in body["checks"]] == [False, False, True]

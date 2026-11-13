@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     CheckConstraint,
     ForeignKey,
     Identity,
@@ -59,6 +58,10 @@ class Monitor(UUIDPrimaryKey, Timestamps, Base):
         ),
     )
 
+    __mapper_args__ = {"eager_defaults": True}  # load the generated ``seq`` after INSERT
+
+    # Compact 4-byte key used by the high-volume time-series tables instead of the UUID.
+    seq: Mapped[int] = mapped_column(Identity(), unique=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -108,34 +111,59 @@ class Monitor(UUIDPrimaryKey, Timestamps, Base):
     ssl_error: Mapped[str | None] = mapped_column(String(500))
 
 
-class CheckResult(Base):
-    """One row per check. High volume: kept ``raw_retention_days`` then rolled up."""
+class _CheckColumns:
+    """Columns shared by recent results and retained (failed / incident) results.
 
-    __tablename__ = "check_results"
-    __table_args__ = (
-        Index("ix_check_results_monitor_time", "monitor_id", text("checked_at DESC")),
-        Index("ix_check_results_checked_at", "checked_at"),
+    Deliberately lean: no surrogate id, no worker name, an int monitor key. Rows are never
+    updated, so the ORM identity is (monitor_seq, checked_at) without a database constraint.
+    """
+
+    monitor_seq: Mapped[int] = mapped_column(
+        ForeignKey("monitors.seq", ondelete="CASCADE"), primary_key=True
     )
-
-    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    monitor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("monitors.id", ondelete="CASCADE"))
-    checked_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    checked_at: Mapped[datetime] = mapped_column(primary_key=True, server_default=func.now())
     is_up: Mapped[bool]
     status_code: Mapped[int | None] = mapped_column(SmallInteger)
     response_ms: Mapped[int | None]
     error_kind: Mapped[str | None] = mapped_column(String(32))
     error_message: Mapped[str | None] = mapped_column(String(500))
-    worker_id: Mapped[str | None] = mapped_column(String(64))
+
+
+class CheckResult(_CheckColumns, Base):
+    """Every check of the last ``raw_retention_days`` (3 by default).
+
+    Partitioned by day (``check_results_pYYYYMMDD`` plus a default partition), created ahead
+    of time by the worker and dropped whole when they expire — see engine.partitions. The
+    primary key below exists only in the ORM; the database has a plain index instead.
+    """
+
+    __tablename__ = "check_results"
+    __table_args__ = (
+        Index("ix_check_results_monitor_time", "monitor_seq", text("checked_at DESC")),
+        Index("ix_check_results_checked_at", "checked_at", postgresql_using="brin"),
+        {"postgresql_partition_by": "RANGE (checked_at)"},
+    )
+
+
+class RetainedCheck(_CheckColumns, Base):
+    """Failed checks, and the checks around each incident, kept ``failed_check_retention_days``
+    (30) after their day partition of ``check_results`` has been dropped."""
+
+    __tablename__ = "retained_checks"
+    __table_args__ = (
+        Index("ix_retained_checks_monitor_time", "monitor_seq", text("checked_at DESC")),
+        Index("ix_retained_checks_checked_at", "checked_at"),
+    )
 
 
 class CheckRollup(Base):
-    """Hourly aggregates used for 7/30/90-day uptime and latency charts."""
+    """Hourly aggregates used for 7/30/90-day uptime and latency charts (400 days)."""
 
     __tablename__ = "check_rollups"
     __table_args__ = (Index("ix_check_rollups_bucket_start", "bucket_start"),)
 
-    monitor_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("monitors.id", ondelete="CASCADE"), primary_key=True
+    monitor_seq: Mapped[int] = mapped_column(
+        ForeignKey("monitors.seq", ondelete="CASCADE"), primary_key=True
     )
     bucket_start: Mapped[datetime] = mapped_column(primary_key=True)
     checks_total: Mapped[int]

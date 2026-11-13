@@ -23,7 +23,9 @@ Your `.env`, `secrets/`, `license/` and `backups/` stay as they are. Compare the
 `.env.example` with your `.env` for new optional settings.
 
 Database migrations run automatically (`migrate` service) before the new version starts.
-Monitoring pauses for the few seconds the containers need to restart; checks that were due
+Releases that restructure stored data say so in the release notes; on large installations
+such a migration can take several minutes, during which no checks run. Otherwise monitoring
+pauses for the few seconds the containers need to restart; checks that were due
 in that time run right after.
 
 ## Rolling back

@@ -117,7 +117,7 @@ async def seed() -> None:
                     is_up = False
                 rows.append(
                     CheckResult(
-                        monitor_id=m.id,
+                        monitor_seq=m.seq,
                         checked_at=t,
                         is_up=is_up,
                         status_code=200 if is_up else 503,

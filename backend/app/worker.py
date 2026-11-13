@@ -19,6 +19,7 @@ from app.core.db import get_engine, get_sessionmaker
 from app.enforcement import enforce_instance_job
 from app.engine import housekeeping as hk
 from app.engine.netclient import build_clients
+from app.engine.partitions import ensure_partitions
 from app.engine.scheduler import Scheduler, new_worker_id
 from app.notifications.outbox import drain_outbox
 
@@ -71,9 +72,19 @@ async def run() -> None:
     def locked(name: str, job: Callable[[], Awaitable[object]]) -> Callable[[], Awaitable[object]]:
         return lambda: hk.with_advisory_lock(name, job)
 
+    # Partitions for today and the next days must exist before the first result is written.
+    await hk.with_advisory_lock("partitions", lambda: ensure_partitions(maker))
+
     try:
         await asyncio.gather(
             scheduler.run(stop),
+            _periodic(
+                "partitions",
+                3600,
+                locked("partitions", lambda: ensure_partitions(maker)),
+                stop,
+                initial_delay=600,
+            ),
             _periodic(
                 "heartbeat",
                 15,

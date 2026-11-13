@@ -20,7 +20,7 @@ from app.models import Monitor
 
 log = logging.getLogger("uptivora.housekeeping")
 
-LOCK_IDS = {"rollup": 7101, "retention": 7102, "ssl": 7103, "billing": 7104}
+LOCK_IDS = {"rollup": 7101, "retention": 7102, "ssl": 7103, "billing": 7104, "partitions": 7105}
 BATCH = 5000
 
 
@@ -42,9 +42,9 @@ async def with_advisory_lock(name: str, job: Callable[[], Awaitable[object]]) ->
 
 _ROLLUP_SQL = text(
     """
-    INSERT INTO check_rollups (monitor_id, bucket_start, checks_total, checks_up,
+    INSERT INTO check_rollups (monitor_seq, bucket_start, checks_total, checks_up,
                                response_ms_avg, response_ms_min, response_ms_max, response_ms_p95)
-    SELECT monitor_id,
+    SELECT monitor_seq,
            date_trunc('hour', checked_at) AS bucket,
            count(*),
            count(*) FILTER (WHERE is_up),
@@ -53,9 +53,9 @@ _ROLLUP_SQL = text(
            max(response_ms),
            round(percentile_cont(0.95) WITHIN GROUP (ORDER BY response_ms))::int
       FROM check_results
-     WHERE checked_at >= :since AND checked_at < date_trunc('hour', now())
-     GROUP BY monitor_id, bucket
-    ON CONFLICT (monitor_id, bucket_start) DO UPDATE SET
+     WHERE checked_at >= :since AND checked_at < :until
+     GROUP BY monitor_seq, bucket
+    ON CONFLICT (monitor_seq, bucket_start) DO UPDATE SET
            checks_total = EXCLUDED.checks_total,
            checks_up = EXCLUDED.checks_up,
            response_ms_avg = EXCLUDED.response_ms_avg,
@@ -69,21 +69,23 @@ _ROLLUP_SQL = text(
 async def rollup_hours(maker: async_sessionmaker[AsyncSession], settings: Settings) -> int:
     """(Re)aggregate completed hours since the newest rollup (minus 2 h of late results)."""
     async with maker() as db, db.begin():
+        # First run (no rollups yet): start at the oldest raw check, so nothing is skipped.
         since = await db.scalar(
             text(
-                "SELECT coalesce(max(bucket_start) - interval '2 hours', "
-                "now() - make_interval(days => :d)) FROM check_rollups"
-            ),
-            {"d": settings.raw_retention_days},
+                "SELECT coalesce((SELECT max(bucket_start) - interval '2 hours' "
+                "FROM check_rollups), (SELECT min(checked_at) FROM check_results), now())"
+            )
         )
-        result = await db.execute(_ROLLUP_SQL, {"since": since})
+        until = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)  # completed hours
+        result = await db.execute(_ROLLUP_SQL, {"since": since, "until": until})
     return result.rowcount or 0
 
 
 # --- retention ------------------------------------------------------------------------------
 
+# Individual checks are handled by engine.partitions (whole day partitions are dropped).
 _PURGES = [
-    ("check_results", "checked_at", "raw_retention_days"),
+    ("retained_checks", "checked_at", "failed_check_retention_days"),
     ("check_rollups", "bucket_start", "rollup_retention_days"),
 ]
 _FIXED_PURGES = [
@@ -98,7 +100,9 @@ _FIXED_PURGES = [
 
 
 async def purge_old_data(maker: async_sessionmaker[AsyncSession], settings: Settings) -> int:
-    deleted = 0
+    from app.engine.partitions import expire_raw_checks
+
+    deleted = await expire_raw_checks(maker, settings)
     for table, column, setting in _PURGES:
         days = getattr(settings, setting)
         while True:  # small batches keep locks and WAL bursts short

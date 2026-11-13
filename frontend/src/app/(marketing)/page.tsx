@@ -10,7 +10,7 @@ const CHECK_FACTS: [string, string][] = [
   ["What fails", "Timeouts, refused connections, DNS errors, broken TLS, an unexpected status code, a missing keyword."],
   ["Before you are told", "A failure is checked again 30 seconds later. Only a second failure opens an incident and sends an email."],
   ["Certificates", "Read on every HTTPS check. You are warned 14, 7 and 1 day before expiry, and when it has expired."],
-  ["History", "Every check is kept for 30 days, hourly summaries for 400 days, every incident for good."],
+  ["History", "Every check for 3 days, failed checks and everything around an outage for 30 days, hourly summaries for 400 days, incidents for good."],
 ];
 
 const ALERT_FACTS: [string, string][] = [

@@ -4,8 +4,8 @@
 
 - A 64-bit Linux server. 1 vCPU and 1 GB RAM handle up to ~500 monitors; in our load test
   2 vCPU kept up with 10,000 monitors checked every minute (use 4 GB RAM at that size).
-- Disk for the database and two weeks of backups: about 35 MB per monitor checked every
-  minute (7 MB at 5-minute checks), plus 5 GB. Details in the operator documentation
+- Disk for the database and two weeks of backups: about 3.5 MB per monitor checked every
+  minute (2.5 MB at 5-minute checks), plus 5 GB. Details in the operator documentation
   (`docs/PERFORMANCE.md` in the source repository).
 - Docker Engine 24 or newer with the Compose plugin (`docker compose version` must work).
 - A DNS name (A and/or AAAA record) pointing at the server, for example `monitor.example.com`.
@@ -47,7 +47,8 @@ Optional settings:
 | `BACKUP_TIME`, `BACKUP_KEEP_DAYS` | `02:30`, `14` | Nightly backup schedule ([backups.md](backups.md)) |
 | `TZ` | `Europe/Zurich` | Time zone of the backup schedule and log timestamps |
 | `UPTIVORA_WORKER_CONCURRENCY` | `50` | Checks that may run at the same time |
-| `UPTIVORA_RAW_RETENTION_DAYS` | `30` | How long individual check results are kept (hourly summaries are kept 400 days) |
+| `UPTIVORA_RAW_RETENTION_DAYS` | `3` | How long every individual check is kept (charts beyond 24 hours use hourly summaries, kept 400 days) |
+| `UPTIVORA_FAILED_CHECK_RETENTION_DAYS` | `30` | How long failed checks and the checks around incidents are kept |
 | `UPTIVORA_SUBNET` | `10.250.47.0/24` | Internal Docker network; change it only if it overlaps your LAN |
 
 ## Start

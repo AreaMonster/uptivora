@@ -239,6 +239,10 @@ Details: [SECURITY.md](SECURITY.md) and [PERFORMANCE.md](PERFORMANCE.md).
 - [x] Query timings with 14.4 M results: admin overview 2.8 s → 0.2 s via rollups; missing
       index on `check_rollups.bucket_start` added (migration 0004)
 - [x] Storage and backup measurements turned into sizing tables (install guide, hosted runbook)
+- [x] Storage reduced by ~90 % (migration 0005): daily partitions of `check_results` dropped
+      after 3 days, lean rows keyed by `monitors.seq` with a BRIN time index (98 instead of
+      214 bytes per check), failed and incident checks kept 30 days in `retained_checks`,
+      zstd backups (~10 instead of 35 bytes per check). 60-second monitor: ~33 MB → ~3.5 MB
 
 ## Phase 10 — Production-readiness review
 

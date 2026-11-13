@@ -71,49 +71,65 @@ Two fixes came out of this:
 
 ## Storage
 
-Measured: **~214 bytes per stored check** (row + both indexes), **~120 bytes per hourly
-rollup**.
+### How checks are stored (since migration 0005)
 
-Per monitor:
-
-| Interval | Raw results, 30 days | Raw results, 7 days | Rollups, 400 days |
+| Table | Holds | Kept | Measured size |
 | --- | --- | --- | --- |
-| 30 s | 18.5 MB | 4.3 MB | 1.2 MB |
-| 60 s | 9.2 MB | 2.2 MB | 1.2 MB |
-| 5 min | 1.8 MB | 0.4 MB | 1.2 MB |
+| `check_results`, one partition per UTC day | every check | `UPTIVORA_RAW_RETENTION_DAYS` (3) | **98 bytes** per check (was 214) |
+| `retained_checks` | failed checks and the checks around each incident | `UPTIVORA_FAILED_CHECK_RETENTION_DAYS` (30) | same rows, a small fraction |
+| `check_rollups` | hourly summary per monitor | `UPTIVORA_ROLLUP_RETENTION_DAYS` (400) | **108 bytes** per hour (was 120) |
 
-**Backups:** a `pg_dump` (custom format, compression 6) is about 6.4× smaller than the
-database — measured ~35 bytes per check (1 million rows: 224 MB in the database, 35 MB
-dumped). The backup service keeps 14 daily dumps by default, so backups need roughly as much
-disk as the database itself.
+What changed and why it is smaller:
 
-Whole installations at 60-second checks, default retention (raw 30 days, rollups 400 days,
-14 backups):
+- **Leaner rows:** no surrogate id, no worker name per row, and a 4-byte monitor number
+  (`monitors.seq`) instead of the 16-byte UUID in the rows and their index.
+- **BRIN index on time:** a few kilobytes per day instead of a B-tree with one entry per row.
+  It stays precise because each day partition is only ever appended to.
+- **Daily partitions:** an expired day is summarised once more, its failed and incident
+  checks are copied to `retained_checks`, and the partition is dropped — instant, no
+  row-by-row deletes, no table bloat. The worker creates partitions a few days ahead;
+  partition maintenance uses a 5 s lock timeout, so a long query delays it instead of
+  stalling inserts.
+- **3 days of raw checks instead of 30:** every chart beyond 24 hours (7/30/90 days) and all
+  uptime percentages beyond 24 hours already come from hourly summaries, so nothing visible
+  is lost. Incident timelines keep their checks for 30 days via `retained_checks`.
+- **zstd backups:** `pg_dump --compress=zstd:9` — **~10 bytes per check** in a backup, against
+  35 with the previous gzip setting. Older gzip dumps still restore.
 
-| Monitors | Database | One backup | Database + 14 backups |
-| --- | --- | --- | --- |
-| 25 (Starter licence) | ~260 MB | ~40 MB | ~0.8 GB |
-| 500 | ~5 GB | ~0.8 GB | ~17 GB |
-| 2,000 | ~21 GB | ~3.2 GB | ~66 GB |
-| 10,000 | ~104 GB | ~16 GB | ~330 GB |
-| 10,000 with `UPTIVORA_RAW_RETENTION_DAYS=7`, `BACKUP_KEEP_DAYS=7` | ~34 GB | ~6 GB | ~76 GB (7 backups) |
+Measured with the production image: 3.6 million checks (10,000 monitors × 6 h) take 353 MB
+including indexes; a zstd dump of them 37 MB; a full dump restored completely. The engine
+still keeps up with 10,000 monitors at 60 s (162 checks/s, no late monitors) and the page
+queries stay in the low milliseconds.
 
-At 5-minute intervals divide the raw part by five. Raw results are only needed for the
-last day's detail and for the 30-day chart until rollups take over; uptime percentages for
-7/30/90 days come from rollups. Large installations can lower `UPTIVORA_RAW_RETENTION_DAYS`
-and `BACKUP_KEEP_DAYS` (after copying backups off the server) without losing history.
+### Per monitor, after 400 days (rollups are then the largest part)
+
+| Interval | Raw checks (3–4 days) | Rollups | Database | 14 backups | Total |
+| --- | --- | --- | --- | --- | --- |
+| 30 s | 1.0 MB | 1.0 MB | ~2.0 MB | ~2.5 MB | **~4.5 MB** |
+| 60 s | 0.5 MB | 1.0 MB | ~1.6 MB | ~1.9 MB | **~3.5 MB** (was ~33 MB) |
+| 5 min | 0.1 MB | 1.0 MB | ~1.2 MB | ~1.3 MB | **~2.5 MB** |
+
+### Whole installations, 60-second checks, default settings
+
+| Monitors | Database | One backup | Database + 14 backups | Before (Phase 9) |
+| --- | --- | --- | --- | --- |
+| 25 (Starter licence) | ~40 MB | ~3 MB | ~0.1 GB | ~0.8 GB |
+| 500 | ~0.8 GB | ~65 MB | ~1.7 GB | ~17 GB |
+| 2,000 | ~3.2 GB | ~0.26 GB | ~7 GB | ~66 GB |
+| 10,000 | ~16 GB | ~1.3 GB | ~34 GB | ~330 GB |
+
+Overall about **90 % less disk** than before.
 
 ## Recommended sizing
 
 | Installation | CPU | RAM | Disk |
 | --- | --- | --- | --- |
-| Self-hosted, up to 500 monitors | 1 vCPU | 1 GB | 25 GB |
-| Up to 2,000 monitors | 2 vCPU | 2 GB | 80 GB, or 40 GB with 7-day raw retention and 7 backups |
-| Up to 10,000 monitors at 60 s | 2 vCPU | 4 GB | 120 GB with 7-day raw retention and 7 backups (copied off-site) |
+| Self-hosted, up to 500 monitors | 1 vCPU | 1 GB | 10 GB |
+| Up to 2,000 monitors | 2 vCPU | 2 GB | 20 GB |
+| Up to 10,000 monitors at 60 s | 2 vCPU | 4 GB | 60 GB |
 
-Beyond that: more worker processes (they coordinate through PostgreSQL) and table
-partitioning of `check_results` by day, so retention becomes dropping a partition instead of
-deleting rows. Neither is needed at the sizes above.
+Beyond that: more worker processes (they coordinate through PostgreSQL). Disk headroom for
+WAL and for one restore test is included above.
 
 ## Repeating the measurements
 

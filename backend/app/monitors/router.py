@@ -78,8 +78,8 @@ async def list_monitors(ctx: CurrentUser, db: DB) -> list[MonitorOut]:
             select(Monitor).where(Monitor.owner_id == ctx.user.id).order_by(Monitor.name)
         )
     ).all()
-    uptimes = await stats.uptime_24h_bulk(db, [m.id for m in monitors])
-    return [_out(m, uptimes.get(m.id)) for m in monitors]
+    uptimes = await stats.uptime_24h_bulk(db, [m.seq for m in monitors])
+    return [_out(m, uptimes.get(m.seq)) for m in monitors]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -124,7 +124,7 @@ async def create_monitor(
 @router.get("/{monitor_id}")
 async def get_monitor(monitor_id: uuid.UUID, ctx: CurrentUser, db: DB) -> dict:
     monitor = await _get_owned(db, ctx, monitor_id)
-    summary = await stats.uptime_summary(db, monitor.id)
+    summary = await stats.uptime_summary(db, monitor.seq)
     return {"monitor": _out(monitor, summary["24h"]), "uptime": summary}
 
 
@@ -270,7 +270,7 @@ async def monitor_series(
     range: Literal["24h", "7d", "30d", "90d"] = Query("24h"),  # noqa: A002
 ) -> dict:
     monitor = await _get_owned(db, ctx, monitor_id)
-    return {"range": range, "points": await stats.series(db, monitor.id, range)}
+    return {"range": range, "points": await stats.series(db, monitor.seq, range)}
 
 
 @router.get("/{monitor_id}/checks")
@@ -283,7 +283,7 @@ async def recent_checks(
     rows = (
         await db.scalars(
             select(CheckResult)
-            .where(CheckResult.monitor_id == monitor.id)
+            .where(CheckResult.monitor_seq == monitor.seq)
             .order_by(CheckResult.checked_at.desc())
             .limit(limit)
         )

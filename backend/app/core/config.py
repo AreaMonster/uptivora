@@ -89,7 +89,11 @@ class Settings(BaseSettings):
 
     # Monitoring engine
     worker_concurrency: int = Field(default=50, ge=1, le=1000)
-    raw_retention_days: int = Field(default=30, ge=1, le=3650)
+    # Every individual check (daily partitions, dropped whole when they expire).
+    raw_retention_days: int = Field(default=3, ge=2, le=90)
+    # Failed checks and the checks around an incident, kept after their day is dropped.
+    failed_check_retention_days: int = Field(default=30, ge=1, le=3650)
+    # Hourly summaries: uptime percentages and charts beyond 24 hours.
     rollup_retention_days: int = Field(default=400, ge=30, le=3650)
     monitor_user_agent: str = "UptivoraBot/0.1 (+https://uptivora.com/bot)"
 

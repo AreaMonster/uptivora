@@ -12,8 +12,9 @@ PostgreSQL 15+ (developed on 17). Source of truth: `backend/app/models/`, migrat
 | | `sessions` | server-side sessions; only SHA-256 of the cookie token stored; CSRF token; absolute expiry |
 | | `auth_tokens` | single-use email tokens (verify, reset, invite), hashed |
 | Monitoring | `monitors` | config + live state + worker lease; `interval_seconds >= 30` (`CHECK`); partial index on due, unpaused monitors |
-| | `check_results` | one row per check (bigint identity); `(monitor_id, checked_at DESC)` index; retained N days |
-| | `check_rollups` | hourly aggregates, PK `(monitor_id, bucket_start)`; long-term charts |
+| | `check_results` | one row per check, partitioned by UTC day (`check_results_pYYYYMMDD` + default); keyed by `monitors.seq`; B-tree `(monitor_seq, checked_at DESC)`, BRIN `(checked_at)`; kept 3 days |
+| | `retained_checks` | failed checks and checks around incidents after their day is dropped; kept 30 days |
+| | `check_rollups` | hourly aggregates, PK `(monitor_seq, bucket_start)`, index on `bucket_start`; kept 400 days |
 | | `incidents` | outage periods, acknowledgement and note; **partial unique index: one open incident per monitor** |
 | Notifications | `notification_settings` | per-user preferences (down / recovery / SSL, warning days, send to account email) |
 | | `alert_contacts` | extra alert recipients; receive alerts only once `verified_at` is set; unique per user |

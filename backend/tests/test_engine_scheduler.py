@@ -157,7 +157,7 @@ async def test_full_outage_lifecycle(isolate, db, maker, settings) -> None:
     first_fail = (
         await db.scalars(
             select(CheckResult.checked_at)
-            .where(CheckResult.monitor_id == m.id, CheckResult.is_up.is_(False))
+            .where(CheckResult.monitor_seq == m.seq, CheckResult.is_up.is_(False))
             .order_by(CheckResult.checked_at)
         )
     ).first()
@@ -178,7 +178,7 @@ async def test_full_outage_lifecycle(isolate, db, maker, settings) -> None:
     assert [x.kind for x in mails] == [NotificationKind.MONITOR_DOWN, NotificationKind.MONITOR_UP]
     assert "RECOVERED" in mails[1].subject
     count = await db.scalar(
-        select(func.count()).select_from(CheckResult).where(CheckResult.monitor_id == m.id)
+        select(func.count()).select_from(CheckResult).where(CheckResult.monitor_seq == m.seq)
     )
     assert count == 5
 
@@ -255,7 +255,7 @@ async def test_result_discarded_when_monitor_changed_during_check(isolate, db, m
     assert await apply_outcome(maker, settings, "w-stale", claim, DOWN) == "stale"
     assert (
         await db.scalar(
-            select(func.count()).select_from(CheckResult).where(CheckResult.monitor_id == m.id)
+            select(func.count()).select_from(CheckResult).where(CheckResult.monitor_seq == m.seq)
         )
         == 0
     )
@@ -295,7 +295,7 @@ async def test_concurrent_workers_check_each_monitor_exactly_once(isolate, db, m
         ]
     )
     await db.commit()
-    ids = set((await db.scalars(select(Monitor.id).where(Monitor.owner_id == user.id))).all())
+    seqs = set((await db.scalars(select(Monitor.seq).where(Monitor.owner_id == user.id))).all())
 
     async def fast_checker(clients, spec, ua):
         await asyncio.sleep(0.005)
@@ -322,9 +322,9 @@ async def test_concurrent_workers_check_each_monitor_exactly_once(isolate, db, m
     elapsed = time.monotonic() - started
     rows = (
         await db.execute(
-            select(CheckResult.monitor_id, func.count())
-            .where(CheckResult.monitor_id.in_(ids))
-            .group_by(CheckResult.monitor_id)
+            select(CheckResult.monitor_seq, func.count())
+            .where(CheckResult.monitor_seq.in_(seqs))
+            .group_by(CheckResult.monitor_seq)
         )
     ).all()
     assert total == n and len(rows) == n and all(c == 1 for _, c in rows)
@@ -339,7 +339,7 @@ async def test_rollups_match_raw_data(isolate, db, maker, settings) -> None:
     for i in range(12):  # 12 checks in one complete hour: 9 up, 3 down
         db.add(
             CheckResult(
-                monitor_id=m.id,
+                monitor_seq=m.seq,
                 checked_at=base + timedelta(minutes=5 * i),
                 is_up=i % 4 != 0,
                 response_ms=100 + i * 10 if i % 4 else None,
@@ -349,7 +349,9 @@ async def test_rollups_match_raw_data(isolate, db, maker, settings) -> None:
     await hk.rollup_hours(maker, settings)
     await hk.rollup_hours(maker, settings)  # idempotent
     r = await db.scalar(
-        select(CheckRollup).where(CheckRollup.monitor_id == m.id, CheckRollup.bucket_start == base)
+        select(CheckRollup).where(
+            CheckRollup.monitor_seq == m.seq, CheckRollup.bucket_start == base
+        )
     )
     assert (r.checks_total, r.checks_up) == (12, 9)
     assert r.response_ms_min == 110 and r.response_ms_max == 210
@@ -361,14 +363,14 @@ async def test_retention_purges_old_results(isolate, db, maker, settings) -> Non
     old = datetime.now(UTC) - timedelta(days=settings.raw_retention_days + 1)
     db.add_all(
         [
-            CheckResult(monitor_id=m.id, checked_at=old, is_up=True),
-            CheckResult(monitor_id=m.id, checked_at=datetime.now(UTC), is_up=True),
+            CheckResult(monitor_seq=m.seq, checked_at=old, is_up=True),
+            CheckResult(monitor_seq=m.seq, checked_at=datetime.now(UTC), is_up=True),
         ]
     )
     await db.commit()
     await hk.purge_old_data(maker, settings)
     left = (
-        await db.scalars(select(CheckResult.checked_at).where(CheckResult.monitor_id == m.id))
+        await db.scalars(select(CheckResult.checked_at).where(CheckResult.monitor_seq == m.seq))
     ).all()
     assert len(left) == 1 and left[0] > old
 
@@ -507,3 +509,102 @@ async def test_run_loop_keeps_working_through_a_backlog(isolate, db, maker, sett
     await task
     # The old loop processed 3 checks and then slept for the 30 s poll interval.
     assert sched.stats.checks_total == 30
+
+
+async def test_expired_day_keeps_failures_and_incident_context(db, maker, settings) -> None:
+    """A day older than raw_retention_days is dropped as a whole partition; its failed checks
+    and the checks around incidents move to retained_checks first."""
+    from app.engine import partitions
+    from app.models import RetainedCheck
+
+    user = await make_user(db)
+    m = await make_monitor(db, user)  # 300 s interval -> incident context of +/- 10 min
+    day = (datetime.now(UTC) - timedelta(days=settings.raw_retention_days + 2)).date()
+    await partitions.create_partition(maker, day)
+    t0 = datetime(day.year, day.month, day.day, 12, tzinfo=UTC)
+    rows = {
+        "far_before": (t0 - timedelta(hours=3), True),
+        "failure": (t0, False),
+        "recovery": (t0 + timedelta(minutes=5), True),
+        "far_after": (t0 + timedelta(hours=3), True),
+    }
+    for checked_at, is_up in rows.values():
+        db.add(CheckResult(monitor_seq=m.seq, checked_at=checked_at, is_up=is_up))
+    db.add(Incident(monitor_id=m.id, started_at=t0, resolved_at=t0 + timedelta(minutes=5)))
+    db.add(
+        CheckResult(
+            monitor_seq=m.seq, checked_at=datetime.now(UTC) - timedelta(hours=2), is_up=True
+        )
+    )
+    old_retained = datetime.now(UTC) - timedelta(days=settings.failed_check_retention_days + 1)
+    db.add(RetainedCheck(monitor_seq=m.seq, checked_at=old_retained, is_up=False))
+    await db.commit()
+
+    await hk.rollup_hours(maker, settings)
+    await hk.purge_old_data(maker, settings)
+
+    assert (
+        await db.scalar(text("SELECT to_regclass(:n)"), {"n": partitions.partition_name(day)})
+        is None
+    )
+    kept = (
+        await db.scalars(
+            select(RetainedCheck.checked_at)
+            .where(RetainedCheck.monitor_seq == m.seq)
+            .order_by(RetainedCheck.checked_at)
+        )
+    ).all()
+    assert kept == [rows["failure"][0], rows["recovery"][0]]
+    raw_old = await db.scalar(
+        select(func.count())
+        .select_from(CheckResult)
+        .where(CheckResult.monitor_seq == m.seq, CheckResult.checked_at < t0 + timedelta(days=1))
+    )
+    assert raw_old == 0
+    # The day still counts in the hourly summaries.
+    rolled = await db.scalar(
+        select(func.sum(CheckRollup.checks_total)).where(
+            CheckRollup.monitor_seq == m.seq,
+            CheckRollup.bucket_start >= t0 - timedelta(hours=3),
+            CheckRollup.bucket_start < t0 + timedelta(hours=4),
+        )
+    )
+    assert rolled == 4
+
+
+async def test_late_partition_takes_over_rows_from_default(db, maker) -> None:
+    from app.engine import partitions
+
+    user = await make_user(db)
+    m = await make_monitor(db, user)
+    day = (datetime.now(UTC) + timedelta(days=40)).date()
+    t = datetime(day.year, day.month, day.day, 8, tzinfo=UTC)
+    db.add(CheckResult(monitor_seq=m.seq, checked_at=t, is_up=True))
+    await db.commit()
+    where = text(
+        "SELECT tableoid::regclass::text FROM check_results "
+        "WHERE monitor_seq = :s AND checked_at = :t"
+    )
+    assert await db.scalar(where, {"s": m.seq, "t": t}) == partitions.DEFAULT_PARTITION
+    await db.commit()  # end the read transaction: creating a partition locks the table
+    assert await partitions.create_partition(maker, day) is True
+    assert await partitions.create_partition(maker, day) is False  # idempotent
+    assert await db.scalar(where, {"s": m.seq, "t": t}) == partitions.partition_name(day)
+    await db.commit()
+    await db.execute(text(f"DROP TABLE {partitions.partition_name(day)}"))
+    await db.commit()
+
+
+async def test_partition_maintenance_backs_off_when_table_is_busy(db, maker) -> None:
+    """A long-running reader must not make partition DDL (and every insert behind it) wait."""
+    from app.engine import partitions
+
+    day = (datetime.now(UTC) + timedelta(days=50)).date()
+    await db.execute(text("SELECT count(*) FROM check_results"))  # open read transaction
+    started = time.monotonic()
+    assert await partitions.create_partition(maker, day) is False
+    assert time.monotonic() - started < 15
+    await db.rollback()
+    assert await partitions.create_partition(maker, day) is True
+    await db.execute(text(f"DROP TABLE {partitions.partition_name(day)}"))
+    await db.commit()

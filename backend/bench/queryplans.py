@@ -37,12 +37,12 @@ async def seed(hours: int) -> None:
             await db.execute(
                 text(
                     """
-                    INSERT INTO check_results (monitor_id, checked_at, is_up, status_code,
-                                               response_ms, worker_id)
-                    SELECT m.id,
+                    INSERT INTO check_results (monitor_seq, checked_at, is_up, status_code,
+                                               response_ms)
+                    SELECT m.seq,
                            now() - make_interval(hours => :h) - g * interval '60 seconds'
                                - random() * interval '50 seconds',
-                           random() > 0.003, 200, (80 + random() * 300)::int, 'synthetic'
+                           random() > 0.003, 200, (80 + random() * 300)::int
                       FROM monitors m, generate_series(0, 59) g
                     """
                 ),
@@ -52,6 +52,12 @@ async def seed(hours: int) -> None:
         await db.execute(text("ANALYZE check_results"))
         await db.commit()
         print(f"seeded {n} monitors x {hours} h in {time.monotonic() - t:.0f}s", flush=True)
+
+
+def text_now_hour():
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
 
 
 async def db_index(sql: str, maker) -> None:
@@ -86,18 +92,19 @@ async def main() -> None:
     t = time.monotonic()
     async with maker() as db, db.begin():
         since = await db.scalar(text(f"SELECT now() - interval '{args.hours + 1} hours'"))
-        await db.execute(hk._ROLLUP_SQL, {"since": since})
+        await db.execute(hk._ROLLUP_SQL, {"since": since, "until": text_now_hour()})
     results["initial_rollup_all_hours_s"] = round(time.monotonic() - t, 1)
     print(f"initial rollup of all hours: {results['initial_rollup_all_hours_s']} s", flush=True)
     async with maker() as db:
         await db.execute(text("ANALYZE check_rollups"))
         await db.commit()
-        ids = list((await db.scalars(text("SELECT id FROM monitors ORDER BY id LIMIT 50"))).all())
+        ids = list((await db.scalars(text("SELECT seq FROM monitors ORDER BY seq LIMIT 50"))).all())
         one = ids[0]
         sizes = (
             await db.execute(
                 text(
-                    "SELECT pg_total_relation_size('check_results') AS raw,"
+                    "SELECT (SELECT sum(pg_total_relation_size(inhrelid)) FROM pg_inherits"
+                    " WHERE inhparent = 'check_results'::regclass) AS raw,"
                     " pg_total_relation_size('check_rollups') AS rolled,"
                     " (SELECT count(*) FROM check_results) AS raw_rows,"
                     " (SELECT count(*) FROM check_rollups) AS rolled_rows"
@@ -105,7 +112,7 @@ async def main() -> None:
             )
         ).one()
     results["sizes"] = dict(sizes._mapping)
-    print(json.dumps(results["sizes"]), flush=True)
+    print(json.dumps(results["sizes"], default=str), flush=True)
 
     async def q_dashboard():
         async with maker() as db:
@@ -138,7 +145,7 @@ async def main() -> None:
             since = await db.scalar(
                 text("SELECT max(bucket_start) - interval '2 hours' FROM check_rollups")
             )
-            await db.execute(hk._ROLLUP_SQL, {"since": since})
+            await db.execute(hk._ROLLUP_SQL, {"since": since, "until": text_now_hour()})
 
     async def q_overview_before():  # the Phase 8 queries: two scans of 24 h raw results
         async with maker() as db:

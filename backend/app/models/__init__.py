@@ -21,6 +21,7 @@ from app.models.monitors import (
     Monitor,
     MonitorStatus,
     PausedReason,
+    RetainedCheck,
 )
 from app.models.notifications import (
     MAX_ALERT_CONTACTS,
@@ -51,6 +52,7 @@ __all__ = [
     "BillingInterval",
     "CheckResult",
     "CheckRollup",
+    "RetainedCheck",
     "HttpMethod",
     "Incident",
     "InstalledLicense",

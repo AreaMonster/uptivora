@@ -350,16 +350,19 @@ async def test_overview_counts_each_check_once_across_rollups(client, db, settin
         return ov["checks"]["last_24h"], sum(h["failed"] for h in ov["checks_by_hour"])
 
     before = await totals()
+    seq = await db.scalar(
+        text("SELECT seq FROM monitors WHERE id = CAST(:m AS uuid)"), {"m": monitor["id"]}
+    )
     await db.execute(
         text(
-            "INSERT INTO check_results (monitor_id, checked_at, is_up, response_ms) "
-            "SELECT CAST(:m AS uuid), now() - interval '3 hours' + g * interval '1 minute',"
-            " g > 1, 100 "
+            "INSERT INTO check_results (monitor_seq, checked_at, is_up, response_ms) "
+            "SELECT CAST(:s AS integer), now() - interval '3 hours' + g * interval '1 minute', "
+            "g > 1, 100 "
             "FROM generate_series(0, 6) g "
-            "UNION ALL SELECT CAST(:m AS uuid), now() - interval '5 minutes', true, 90 "
+            "UNION ALL SELECT CAST(:s AS integer), now() - interval '5 minutes', true, 90 "
             "FROM generate_series(1, 4)"
         ),
-        {"m": monitor["id"]},
+        {"s": seq},
     )
     await db.commit()
     raw_only = await totals()
