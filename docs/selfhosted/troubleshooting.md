@@ -53,6 +53,15 @@ Uptivora refuses URLs that resolve to private or reserved addresses (your LAN, l
 cloud metadata). This protects the server from being used to scan internal networks and
 cannot be switched off. Monitor such systems through their public address.
 
+## Alerts are held back
+
+With `UPTIVORA_NETWORK_CANARIES` set, Uptivora notices when most of your sites *and* the
+canary URLs fail with network errors at the same moment. That means this server's own
+connection or DNS is down, so it holds outage alerts and retries every minute. Admin →
+System shows the notice. Fix the server's connectivity; checks continue normally afterwards.
+Without canaries (the default) this guard is off, so a real outage of a provider that hosts
+all your sites is always reported.
+
 ## All monitors show as down at the same time
 
 Usually the server lost its own internet connection or DNS. Check from the server:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -20,7 +21,8 @@ from app.core.config import Settings
 from app.core.netguard import UnsafeURLError, validate_monitor_url
 from app.engine.checker import CheckOutcome, CheckSpec, run_check
 from app.engine.netclient import MonitorClients
-from app.engine.results import Claim, apply_outcome
+from app.engine.netwatch import NetworkWatch, is_network_failure
+from app.engine.results import Claim, apply_outcome, defer_check
 
 log = logging.getLogger("uptivora.scheduler")
 
@@ -53,7 +55,10 @@ class SchedulerStats:
     checks_total: int = 0
     checks_failed: int = 0
     in_flight: int = 0
-    events: dict[str, int] = field(default_factory=lambda: {"down": 0, "up": 0, "stale": 0})
+    events: dict[str, int] = field(
+        default_factory=lambda: {"down": 0, "up": 0, "stale": 0, "held": 0}
+    )
+    network_held: bool = False  # local network problem detected (see engine.netwatch)
 
 
 class _HostLimiter:
@@ -87,6 +92,7 @@ class Scheduler:
         batch_size: int = 100,
         poll_interval: float = 1.0,
         checker: Checker = run_check,
+        netwatch: NetworkWatch | None = None,
     ) -> None:
         self.maker = maker
         self.settings = settings
@@ -100,6 +106,10 @@ class Scheduler:
         self._hosts = _HostLimiter(PER_HOST_CONCURRENCY)
         self._tasks: set[asyncio.Task] = set()
         self._last_limit = 0
+        self.netwatch = netwatch or NetworkWatch(
+            settings.network_canaries, clients, settings.monitor_user_agent
+        )
+        self.last_loop = time.monotonic()  # for the external heartbeat
 
     async def claim(self, limit: int) -> list[Claim]:
         if limit <= 0:
@@ -145,6 +155,14 @@ class Scheduler:
             outcome = await self._hosts.run(
                 host, lambda: self.checker(self.clients, spec, self.settings.monitor_user_agent)
             )
+            self.netwatch.record(host, outcome)
+            if is_network_failure(outcome) and await self.netwatch.local_outage():
+                # Our own network is down, not the customer's site: retry, no alert.
+                await defer_check(self.maker, self.worker_id, claim)
+                self.stats.events["held"] = self.stats.events.get("held", 0) + 1
+                self.stats.network_held = True
+                return
+            self.stats.network_held = self.netwatch.held
             event = await apply_outcome(self.maker, self.settings, self.worker_id, claim, outcome)
             self.stats.checks_total += 1
             if not outcome.is_up:
@@ -177,6 +195,7 @@ class Scheduler:
     async def run(self, stop: asyncio.Event) -> None:
         log.info("Scheduler %s started (concurrency=%s)", self.worker_id, self.concurrency)
         while not stop.is_set():
+            self.last_loop = time.monotonic()
             try:
                 started = await self.tick()
             except Exception:  # noqa: BLE001 — e.g. database briefly unavailable

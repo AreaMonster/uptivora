@@ -87,6 +87,7 @@ async def rollup_hours(maker: async_sessionmaker[AsyncSession], settings: Settin
 _PURGES = [
     ("retained_checks", "checked_at", "failed_check_retention_days"),
     ("check_rollups", "bucket_start", "rollup_retention_days"),
+    ("audit_log", "created_at", "audit_retention_days"),
 ]
 _FIXED_PURGES = [
     "DELETE FROM system_events WHERE created_at < now() - interval '30 days'",
@@ -170,11 +171,11 @@ async def ssl_warning_sweep(maker: async_sessionmaker[AsyncSession], settings: S
 _HEARTBEAT_SQL = text(
     """
     INSERT INTO worker_heartbeats (worker_id, hostname, pid, version, started_at, last_seen_at,
-                                   checks_total, checks_failed, in_flight)
-    VALUES (:id, :host, :pid, :version, :started, now(), :total, :failed, :in_flight)
+                                   checks_total, checks_failed, in_flight, network_held)
+    VALUES (:id, :host, :pid, :version, :started, now(), :total, :failed, :in_flight, :held)
     ON CONFLICT (worker_id) DO UPDATE SET last_seen_at = now(),
         checks_total = EXCLUDED.checks_total, checks_failed = EXCLUDED.checks_failed,
-        in_flight = EXCLUDED.in_flight
+        in_flight = EXCLUDED.in_flight, network_held = EXCLUDED.network_held
     """
 )
 
@@ -198,6 +199,7 @@ async def heartbeat(
                 "total": stats.checks_total,
                 "failed": stats.checks_failed,
                 "in_flight": stats.in_flight,
+                "held": stats.network_held,
             },
         )
 

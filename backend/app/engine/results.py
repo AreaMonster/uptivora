@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
@@ -55,6 +55,28 @@ async def _first_failure_time(
         .limit(1)
     )
     return ts or fallback
+
+
+HOLD_SECONDS = 60
+
+
+async def defer_check(
+    maker: async_sessionmaker[AsyncSession],
+    worker_id: str,
+    claim: Claim,
+    seconds: int = HOLD_SECONDS,
+) -> None:
+    """Release a claim without recording a result and retry later (local network problem)."""
+    async with maker() as db, db.begin():
+        await db.execute(
+            update(Monitor)
+            .where(Monitor.id == claim.id, Monitor.lease_owner == worker_id)
+            .values(
+                next_check_at=func.now() + timedelta(seconds=seconds),
+                lease_owner=None,
+                lease_until=None,
+            )
+        )
 
 
 async def apply_outcome(

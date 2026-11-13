@@ -74,3 +74,30 @@ async def test_delete_account(client, make_client) -> None:
     assert ok.status_code == 204
     again = await make_client().post("/api/auth/login", json={"email": email, "password": PASSWORD})
     assert again.status_code == 401
+
+
+async def test_data_export_contains_my_data_and_no_secrets(client, make_client, db) -> None:
+    from tests.conftest import give_plan
+
+    me = await register(client)
+    await give_plan(db, me["user"]["id"], "pro")
+    await client.post(
+        "/api/monitors",
+        json={"name": "Shop", "url": "https://shop.example.com", "interval_seconds": 300},
+    )
+    await client.post("/api/account/alert-contacts", json={"email": "team@example.com"})
+    other = make_client()
+    await register(other)
+    await other.post("/api/monitors", json={"name": "Not mine", "url": "https://x.example.com"})
+
+    resp = await client.get("/api/account/export")
+    assert resp.status_code == 200
+    assert resp.headers["content-disposition"].startswith("attachment;")
+    data = resp.json()
+    assert data["account"]["email"] == me["user"]["email"]
+    assert [m["name"] for m in data["monitors"]] == ["Shop"]
+    assert [c["email"] for c in data["alert_recipients"]] == ["team@example.com"]
+    assert data["subscriptions"] and data["sessions"]
+    raw = resp.text
+    for secret in ("password_hash", "token_hash", "csrf_token", "argon2", me["csrf_token"]):
+        assert secret not in raw

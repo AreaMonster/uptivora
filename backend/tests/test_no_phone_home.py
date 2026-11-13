@@ -28,7 +28,8 @@ FRONTEND_SRC = Path(__file__).resolve().parents[2] / "frontend" / "src"
 
 # module prefix -> files allowed to import it
 ALLOWED_NETWORK_IMPORTS = {
-    "httpx": {"engine/netclient.py", "engine/checker.py"},
+    # deadman.py: the opt-in UPTIVORA_HEARTBEAT_URL ping, off unless the operator sets a URL.
+    "httpx": {"engine/netclient.py", "engine/checker.py", "engine/deadman.py"},
     "httpcore": {"engine/netclient.py"},
     "aiosmtplib": {"notifications/mailer.py"},
 }

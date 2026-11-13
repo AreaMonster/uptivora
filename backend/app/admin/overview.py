@@ -181,7 +181,7 @@ async def health(db: DB, settings: AppSettings) -> dict:
         await db.execute(
             text("""
         SELECT worker_id, hostname, pid, version, started_at, last_seen_at, checks_total,
-               checks_failed, in_flight,
+               checks_failed, in_flight, network_held,
                extract(epoch FROM now() - last_seen_at) AS seen_ago
           FROM worker_heartbeats ORDER BY last_seen_at DESC""")
         )
@@ -218,6 +218,11 @@ async def health(db: DB, settings: AppSettings) -> dict:
     if not live_workers:
         issues.append(
             "No monitoring worker has reported in the last minute — checks are not running."
+        )
+    if any(w.network_held for w in live_workers):
+        issues.append(
+            "Most monitored sites and the canary URLs are unreachable from this server: its own "
+            "network or DNS is probably down. Outage alerts are held back until it recovers."
         )
     if lag.overdue:
         issues.append(f"{lag.overdue} monitors are overdue (oldest {int(lag.max_delay)} s).")

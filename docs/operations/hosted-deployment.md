@@ -67,6 +67,16 @@ few seconds: add columns as nullable or with a default, drop columns one release
 
 ## Monitoring the monitor
 
-Uptivora cannot alert about its own outage. Use an independent check from another provider
-or a second small server: `https://app.uptivora.com/api/health/ready` must return 200, and
-Admin → System must show at least one worker with a heartbeat younger than a minute.
+Uptivora cannot alert about its own outage. Set up at least one of these, alerting you through
+a channel that does not depend on this server:
+
+- An external uptime check of `https://app.uptivora.com/api/health/service`: 200 while checks
+  run and email flows, 503 with `"checks": "stopped" | "delayed" | "held"` or
+  `"email": "delayed"` otherwise. It reveals no counts or host names.
+- `UPTIVORA_HEARTBEAT_URL`: the worker requests it every minute while healthy (e.g. a
+  healthchecks.io check); missing pings mean the server or worker is down.
+
+`UPTIVORA_NETWORK_CANARIES` (set in `.env.example`) keeps a network outage of this server from
+emailing every customer; [runbooks.md](runbooks.md) covers each health state. Run
+`docker compose run --rm api python -m app.cli preflight --smtp` after every configuration
+change.

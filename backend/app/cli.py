@@ -1,6 +1,7 @@
 """Operator command line.
 
   python -m app.cli migrate
+  python -m app.cli preflight [--smtp]
   python -m app.cli create-user --email a@b.ch --password '...' [--admin] [--plan pro]
 
 ``--plan`` creates a TEST-MODE subscription (no payment) and is refused in production.
@@ -77,10 +78,28 @@ async def _create_user(args: argparse.Namespace) -> None:
     await get_engine().dispose()
 
 
+def cmd_preflight(args: argparse.Namespace) -> None:
+    from app.preflight import render, run_checks
+
+    async def run() -> list:
+        try:
+            return await run_checks(get_settings(), smtp=args.smtp)
+        finally:
+            await get_engine().dispose()
+
+    results = asyncio.run(run())
+    print(render(results))
+    if any(r.level == "FAIL" for r in results):
+        raise SystemExit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="uptivora")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("migrate", help="apply database migrations").set_defaults(func=cmd_migrate)
+    pf = sub.add_parser("preflight", help="check that this installation is ready for production")
+    pf.add_argument("--smtp", action="store_true", help="also log in to the SMTP server")
+    pf.set_defaults(func=cmd_preflight)
     p = sub.add_parser("create-user", help="create a user account")
     p.add_argument("--email", required=True)
     p.add_argument("--password")

@@ -1,0 +1,7 @@
+# Secret scanning: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks git /repo --redact
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test suites use made-up passwords and tokens"
+paths = ['''(^|/)backend/tests/''']

@@ -95,7 +95,17 @@ class Settings(BaseSettings):
     failed_check_retention_days: int = Field(default=30, ge=1, le=3650)
     # Hourly summaries: uptime percentages and charts beyond 24 hours.
     rollup_retention_days: int = Field(default=400, ge=30, le=3650)
+    # Security audit log (contains IP addresses).
+    audit_retention_days: int = Field(default=365, ge=30, le=3650)
     monitor_user_agent: str = "UptivoraBot/0.1 (+https://uptivora.com/bot)"
+    # Alert-storm guard: when most monitored hosts fail with network errors at once, these
+    # public URLs are checked; if they fail too, the problem is our own network and outage
+    # alerts are held back. Empty (default) disables the guard and adds no outbound calls.
+    network_canaries: list[str] = []
+
+    # Optional "dead man's switch": the worker requests this URL every minute while checks
+    # are running normally (e.g. a healthchecks.io ping URL). Empty = off.
+    heartbeat_url: str = ""
 
     @classmethod
     def settings_customise_sources(
@@ -137,6 +147,15 @@ class Settings(BaseSettings):
                 )
             if not self.secret_key.get_secret_value():
                 self.secret_key = SecretStr("insecure-development-secret-key-not-for-production")
+
+        if self.heartbeat_url:
+            hb = urlsplit(self.heartbeat_url)
+            if hb.scheme not in ("http", "https") or not hb.hostname:
+                raise ValueError("UPTIVORA_HEARTBEAT_URL must be an absolute http(s) URL")
+        for canary in self.network_canaries:
+            c = urlsplit(canary)
+            if c.scheme not in ("http", "https") or not c.hostname:
+                raise ValueError("UPTIVORA_NETWORK_CANARIES must contain absolute http(s) URLs")
 
         if self.edition == "selfhosted" and self.billing_provider != "disabled":
             raise ValueError("Billing is only available in the hosted edition")

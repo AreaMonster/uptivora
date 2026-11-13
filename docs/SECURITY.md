@@ -53,6 +53,9 @@ egress) · worker ⇄ internet (monitored sites, SMTP) · operator laptop (licen
 | T18 | Container breakout impact | Non-root, read-only FS, `cap_drop: ALL`, `no-new-privileges`, DB on internal network | `deploy/*/compose.yaml`, image check in release script |
 | T19 | TEST payments mistaken for real revenue | Test provider refused in production unless explicitly allowed; TEST labels in UI, emails, MRR split | `test_billing.py`, `test_config.py` |
 | T20 | Vulnerable dependencies | Pinned versions; audits each release | see results below |
+| T21 | Leaked secrets in the repository | `.gitignore` for keys/secrets/.env; release script refuses tracked key files; gitleaks over the full history | gitleaks: no leaks (Phase 10) |
+| T22 | Our own outage emails every customer (alert storm) | Canary-confirmed local network detection holds alerts; off without canaries so real outages are never suppressed | `test_monitoring_the_monitor.py` |
+| T23 | Silent death of the service | Public `/api/health/service` for external checks; optional outbound heartbeat; preflight command | `test_monitoring_the_monitor.py`, `test_preflight.py` |
 
 ## Accepted risks
 

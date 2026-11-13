@@ -1,10 +1,12 @@
 #!/bin/sh
 # Uptivora database backups (runs inside the postgres image as the "backup" service).
 #
-#   schedule          dump every day at BACKUP_TIME (default 02:30), keep BACKUP_KEEP_DAYS (14)
+#   schedule          dump every day at BACKUP_TIME (default 02:30), keep BACKUP_KEEP_DAYS (14);
+#                     on BACKUP_VERIFY_WEEKDAY (1-7, default 7 = Sunday, 0 = never) the new
+#                     dump is also restored into a scratch database and checked
 #   now               write one dump immediately
 #   list              show existing dumps
-#   verify FILE       restore FILE into a scratch database and check it, then drop it
+#   verify [FILE]     restore FILE (default: newest) into a scratch database, check it, drop it
 #   restore FILE      replace the live database with FILE (stop api, worker and web first)
 #
 # Dumps are PostgreSQL custom-format files in /backups (./backups on the host).
@@ -13,6 +15,7 @@ set -eu
 DIR=/backups
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 AT="${BACKUP_TIME:-02:30}"
+VERIFY_WEEKDAY="${BACKUP_VERIFY_WEEKDAY:-7}"
 PGPASSWORD="$(cat /run/secrets/db_password)"
 export PGPASSWORD
 export PGHOST="${PGHOST:-db}" PGUSER="${PGUSER:-uptivora}" PGDATABASE="${PGDATABASE:-uptivora}"
@@ -40,6 +43,23 @@ seconds_until_next_run() {
 	echo $((target - now))
 }
 
+verify_file() {
+	scratch="uptivora_verify_$$"
+	createdb "$scratch"
+	trap 'dropdb --if-exists "$scratch"' EXIT
+	pg_restore --no-owner --no-privileges --exit-on-error --dbname="$scratch" "$1"
+	users="$(psql -d "$scratch" -Atc 'SELECT count(*) FROM users')"
+	monitors="$(psql -d "$scratch" -Atc 'SELECT count(*) FROM monitors')"
+	rev="$(psql -d "$scratch" -Atc 'SELECT version_num FROM alembic_version')"
+	dropdb --if-exists "$scratch"
+	trap - EXIT
+	log "OK: $(basename "$1") restores cleanly — $users users, $monitors monitors, schema $rev"
+}
+
+newest_dump() {
+	ls -1t "$DIR"/uptivora-*.dump 2>/dev/null | head -n 1
+}
+
 resolve_file() {
 	case "$1" in
 		/*) echo "$1" ;;
@@ -55,7 +75,14 @@ case "${1:-schedule}" in
 			wait_s="$(seconds_until_next_run)"
 			sleep "$wait_s" &
 			wait $!
-			dump_now || log "FAILED — check the database connection and free disk space"
+			if dump_now; then
+				if [ "$(date +%u)" = "$VERIFY_WEEKDAY" ]; then
+					verify_file "$(newest_dump)" ||
+						log "VERIFY FAILED — the newest backup does not restore; investigate now"
+				fi
+			else
+				log "FAILED — check the database connection and free disk space"
+			fi
 		done
 		;;
 	now)
@@ -65,15 +92,7 @@ case "${1:-schedule}" in
 		ls -lh "$DIR"/uptivora-*.dump 2>/dev/null || echo "No backups in $DIR yet."
 		;;
 	verify)
-		file="$(resolve_file "${2:?usage: verify FILE}")"
-		scratch="uptivora_verify_$$"
-		createdb "$scratch"
-		trap 'dropdb --if-exists "$scratch"' EXIT
-		pg_restore --no-owner --no-privileges --exit-on-error --dbname="$scratch" "$file"
-		users="$(psql -d "$scratch" -Atc 'SELECT count(*) FROM users')"
-		monitors="$(psql -d "$scratch" -Atc 'SELECT count(*) FROM monitors')"
-		rev="$(psql -d "$scratch" -Atc 'SELECT version_num FROM alembic_version')"
-		log "OK: $(basename "$file") restores cleanly — $users users, $monitors monitors, schema $rev"
+		verify_file "$(resolve_file "${2:-$(newest_dump)}")"
 		;;
 	restore)
 		file="$(resolve_file "${2:?usage: restore FILE}")"
@@ -84,7 +103,7 @@ case "${1:-schedule}" in
 		log "restore complete. Start the application again: docker compose up -d"
 		;;
 	*)
-		echo "usage: $0 schedule|now|list|verify FILE|restore FILE" >&2
+		echo "usage: $0 schedule|now|list|verify [FILE]|restore FILE" >&2
 		exit 2
 		;;
 esac

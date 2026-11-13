@@ -32,6 +32,7 @@ export function SettingsPage() {
       <NotificationSettings />
       <PasswordSection />
       <SessionsSection />
+      <DataSection />
       <DangerSection />
     </>
   );
@@ -223,6 +224,20 @@ function SessionsSection() {
           })}
         </ul>
       )}
+    </SettingsSection>
+  );
+}
+
+function DataSection() {
+  return (
+    <SettingsSection title="Your data" description="Everything Uptivora stores about you, as a JSON file.">
+      <p className="text-sm text-fg-muted">
+        Account, monitors, incidents, alert recipients, emails sent, sessions, billing and
+        activity log. Passwords and security tokens are never included.
+      </p>
+      <a href="/api/account/export" download className="mt-4 inline-flex h-9 items-center rounded-[3px] border border-line-strong bg-surface px-3.5 text-sm font-medium hover:border-fg-subtle hover:bg-hover">
+        Download my data
+      </a>
     </SettingsSection>
   );
 }

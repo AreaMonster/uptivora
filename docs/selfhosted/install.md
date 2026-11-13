@@ -49,6 +49,9 @@ Optional settings:
 | `UPTIVORA_WORKER_CONCURRENCY` | `50` | Checks that may run at the same time |
 | `UPTIVORA_RAW_RETENTION_DAYS` | `3` | How long every individual check is kept (charts beyond 24 hours use hourly summaries, kept 400 days) |
 | `UPTIVORA_FAILED_CHECK_RETENTION_DAYS` | `30` | How long failed checks and the checks around incidents are kept |
+| `BACKUP_VERIFY_WEEKDAY` | `7` | Day (1 = Monday … 7 = Sunday, 0 = never) the new backup is test-restored |
+| `UPTIVORA_HEARTBEAT_URL` | empty | Requested every minute while checks run, e.g. a healthchecks.io URL — another service then alerts you if this server stops |
+| `UPTIVORA_NETWORK_CANARIES` | `[]` | Public URLs that tell a network outage of this server apart from real outages ([troubleshooting.md](troubleshooting.md#alerts-are-held-back)). Off by default |
 | `UPTIVORA_SUBNET` | `10.250.47.0/24` | Internal Docker network; change it only if it overlaps your LAN |
 
 ## Start
@@ -59,6 +62,12 @@ docker compose ps
 ```
 
 All services should be `running` (`migrate` exits after applying database migrations).
+Check the configuration:
+
+```bash
+docker compose run --rm api python -m app.cli preflight --smtp
+```
+
 Open `https://<your domain>`, create the first account — it becomes the administrator — and
 follow the setup checklist on the admin overview: install the licence, send a test email,
 add your first monitor, invite colleagues.

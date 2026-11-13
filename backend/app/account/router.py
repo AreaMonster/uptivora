@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from zoneinfo import available_timezones
 
 from fastapi import APIRouter, Request, Response, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 
@@ -119,6 +120,26 @@ async def revoke_session(session_id: uuid.UUID, ctx: CurrentUser, db: DB) -> Res
     session.revoked_at = datetime.now(UTC)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/export")
+async def export_data(ctx: CurrentUser, request: Request, db: DB) -> JSONResponse:
+    """Download everything stored about this account (JSON)."""
+    from app.account.export import collect
+
+    await ratelimit.hit("account-export", str(ctx.user.id), limit=5, window_seconds=3600)
+    data = await collect(db, ctx.user)
+    audit(
+        db,
+        "account.export",
+        actor_id=ctx.user.id,
+        ip=client_ip(request),
+        target_type="user",
+        target_id=ctx.user.id,
+    )
+    await db.commit()
+    name = f"uptivora-data-{datetime.now(UTC):%Y%m%d}.json"
+    return JSONResponse(data, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

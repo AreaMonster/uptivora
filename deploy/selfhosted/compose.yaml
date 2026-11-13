@@ -131,6 +131,7 @@ services:
       PGDATABASE: uptivora
       BACKUP_TIME: ${BACKUP_TIME:-02:30}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_VERIFY_WEEKDAY: ${BACKUP_VERIFY_WEEKDAY:-7}
       TZ: ${TZ:-UTC}
     secrets: [db_password]
     volumes:

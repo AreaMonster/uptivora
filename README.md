@@ -94,7 +94,7 @@ in `tools/licensegen`.
 Both editions run the same two images (`uptivora/api`, `uptivora/web`) behind Caddy:
 
 ```bash
-ALLOW_DIRTY=1 deploy/release/build.sh     # images + dist/uptivora-selfhosted-<version>.tar.gz
+ALLOW_DIRTY=1 ALLOW_NO_PRODUCTION_KEYS=1 deploy/release/build.sh   # test build: images + dist/uptivora-selfhosted-<version>.tar.gz
 ```
 
 * Self-hosted bundle: `deploy/selfhosted/` — customer guide in [docs/selfhosted](docs/selfhosted/README.md)
@@ -111,3 +111,7 @@ ALLOW_DIRTY=1 deploy/release/build.sh     # images + dist/uptivora-selfhosted-<v
 * [Licence key operations](docs/LICENSE_KEY_OPERATIONS.md)
 * [Security: threat model and test results](docs/SECURITY.md)
 * [Performance and sizing](docs/PERFORMANCE.md)
+* [Production readiness and go-live checklist](docs/operations/production-readiness.md)
+* [Incident runbooks](docs/operations/runbooks.md)
+* [Legal and financial handover](docs/operations/legal-handover.md)
+* [Changelog](CHANGELOG.md)

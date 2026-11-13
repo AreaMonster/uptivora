@@ -116,6 +116,49 @@ def create_app() -> FastAPI:
             return {"status": "unavailable", "database": "down"}
         return {"status": "ok", "database": "up", "edition": settings.edition}
 
+    @app.get("/api/health/service", tags=["health"])
+    async def service_health(response: Response) -> dict[str, str]:
+        """For an external uptime check of Uptivora itself. Deliberately terse (no counts,
+        host names or versions): 200 when checks run and email flows, otherwise 503."""
+        try:
+            async with get_sessionmaker()() as db:
+                row = (
+                    await db.execute(
+                        text(
+                            """
+                            SELECT
+                              (SELECT count(*) FROM worker_heartbeats
+                                WHERE last_seen_at > now() - interval '60 seconds') AS workers,
+                              (SELECT count(*) FROM worker_heartbeats
+                                WHERE last_seen_at > now() - interval '60 seconds'
+                                  AND network_held) AS held,
+                              (SELECT count(*) FROM monitors WHERE NOT is_paused
+                                  AND next_check_at < now() - interval '5 minutes') AS overdue,
+                              (SELECT coalesce(extract(epoch FROM now() - min(created_at)), 0)
+                                 FROM notification_outbox
+                                WHERE status IN ('pending', 'sending')) AS mail_wait
+                            """
+                        )
+                    )
+                ).one()
+        except Exception:  # noqa: BLE001 — database down
+            response.status_code = 503
+            return {"status": "unavailable", "checks": "unknown", "email": "unknown"}
+        checks = (
+            "stopped"
+            if not row.workers
+            else "held"
+            if row.held
+            else "delayed"
+            if row.overdue
+            else "running"
+        )
+        email = "delayed" if row.mail_wait > 900 else "ok"
+        healthy = checks == "running" and email == "ok"
+        if not healthy:
+            response.status_code = 503
+        return {"status": "ok" if healthy else "degraded", "checks": checks, "email": email}
+
     app.include_router(public_router)
     app.include_router(auth_router)
     app.include_router(account_router)

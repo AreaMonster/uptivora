@@ -35,6 +35,16 @@ docker build --pull --label "org.opencontainers.image.version=$VERSION" \
 docker build --pull --label "org.opencontainers.image.version=$VERSION" \
 	--label "org.opencontainers.image.revision=$REVISION" -t "$PREFIX/web:$VERSION" frontend
 
+# A self-hosted release without production public keys would reject every customer licence.
+if ! docker run --rm --entrypoint python "$PREFIX/api:$VERSION" -c 	'import sys; from app.licensing.keys import PRODUCTION_PUBLIC_KEYS as k; sys.exit(0 if k else 3)'; then
+	if [ "${ALLOW_NO_PRODUCTION_KEYS:-0}" != 1 ]; then
+		echo "No production public key in backend/app/licensing/keys.py — do the key ceremony" >&2
+		echo "(docs/LICENSE_KEY_OPERATIONS.md) or set ALLOW_NO_PRODUCTION_KEYS=1 for a test build." >&2
+		exit 1
+	fi
+	echo "WARNING: test build without production licence keys" >&2
+fi
+
 # The images must not contain development keys or the dev seed.
 docker run --rm --entrypoint sh "$PREFIX/api:$VERSION" -c \
 	'test ! -e /app/.dev-keys && test ! -e /app/app/devseed.py && test ! -d /app/tests' || {

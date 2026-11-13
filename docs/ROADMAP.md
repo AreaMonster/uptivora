@@ -244,11 +244,23 @@ Details: [SECURITY.md](SECURITY.md) and [PERFORMANCE.md](PERFORMANCE.md).
       214 bytes per check), failed and incident checks kept 30 days in `retained_checks`,
       zstd backups (~10 instead of 35 bytes per check). 60-second monitor: ~33 MB → ~3.5 MB
 
-## Phase 10 — Production-readiness review
+## Phase 10 — Production-readiness review ✅ (2026-11-13)
 
-- Checklist: secrets, backups tested by restore, monitoring of the monitor (external
-  heartbeat), log rotation, alerting, incident runbooks
-- Legal items that need a professional, not code: Terms, Privacy Policy (revDSG/GDPR),
-  DPA, licence agreement wording, VAT handling, payment provider onboarding
-- Release v1.0: hosted launch with TEST billing → switch to real provider once the account
-  exists; self-hosted bundle publication
+Details: [operations/production-readiness.md](operations/production-readiness.md).
+
+- [x] Monitoring the monitor: public `/api/health/service` (200/503, no details) and an
+      optional `UPTIVORA_HEARTBEAT_URL` dead man's switch
+- [x] Alert-storm guard: when most sites and the configured canary URLs fail with network
+      errors, alerts are held and checks retried (migration 0006 adds `network_held`)
+- [x] `python -m app.cli preflight [--smtp]` production checks; release script refuses builds
+      without production licence keys; gitleaks scan of the whole history (clean)
+- [x] Weekly automatic restore test of the newest backup
+- [x] Personal data export (Settings → Your data) and a 365-day retention for the audit log
+- [x] Incident runbooks, readiness checklist and go-live steps, legal/financial handover,
+      CHANGELOG for 1.0.0
+
+Still open, outside the code:
+
+- [ ] Licence key ceremony (offline) and `PRODUCTION_PUBLIC_KEYS`
+- [ ] Terms, privacy policy, DPA, EULA, legal notice; VAT questions; payment provider
+- [ ] Release v1.0.0: hosted launch (billing disabled or real provider), self-hosted bundle

@@ -51,6 +51,26 @@ def build_message(settings: Settings, data: EmailMessageData) -> EmailMessage:
     return msg
 
 
+async def test_connection(settings: Settings) -> None:
+    """Connect, negotiate TLS and log in without sending anything (used by preflight)."""
+    if not settings.smtp_host:
+        raise MailerError("SMTP is not configured (UPTIVORA_SMTP_HOST)")
+    client = aiosmtplib.SMTP(
+        hostname=settings.smtp_host,
+        port=settings.smtp_port,
+        use_tls=settings.smtp_security == "tls",
+        start_tls=True if settings.smtp_security == "starttls" else False,
+        timeout=settings.smtp_timeout_seconds,
+    )
+    try:
+        await client.connect()
+        if settings.smtp_username:
+            await client.login(settings.smtp_username, settings.smtp_password.get_secret_value())
+        await client.quit()
+    except (aiosmtplib.SMTPException, OSError, TimeoutError) as exc:
+        raise MailerError(f"{type(exc).__name__}: {exc}") from exc
+
+
 async def send_email(settings: Settings, data: EmailMessageData) -> None:
     if not settings.smtp_host:
         raise MailerError("SMTP is not configured (UPTIVORA_SMTP_HOST)")

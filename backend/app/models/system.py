@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Identity, Index, String, Text, func, text
+from sqlalchemy import BigInteger, ForeignKey, Identity, Index, String, Text, false, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -51,6 +51,7 @@ class WorkerHeartbeat(Base):
     checks_total: Mapped[int] = mapped_column(BigInteger, default=0)
     checks_failed: Mapped[int] = mapped_column(BigInteger, default=0)
     in_flight: Mapped[int] = mapped_column(default=0)
+    network_held: Mapped[bool] = mapped_column(default=False, server_default=false())
 
 
 class AuditLog(Base):

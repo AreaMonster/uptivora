@@ -30,8 +30,11 @@ docker compose exec backup uptivora-backup list       # list backups
 docker compose exec backup uptivora-backup verify uptivora-20261113T013000Z.dump
 ```
 
-`verify` restores a dump into a temporary database, checks it and drops it again. Run it
-from time to time — a backup you have never restored is a hope, not a backup.
+`verify` restores a dump (the newest if you name none) into a temporary database, checks it
+and drops it again. The backup service does this automatically every Sunday
+(`BACKUP_VERIFY_WEEKDAY`) and logs `VERIFY FAILED` if a dump does not restore — a backup you
+have never restored is a hope, not a backup. Check with
+`docker compose logs backup | grep -E "OK:|FAILED"`.
 
 ## Restore
 

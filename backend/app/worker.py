@@ -17,6 +17,7 @@ from app.core import eventlog, ratelimit
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
 from app.enforcement import enforce_instance_job
+from app.engine import deadman
 from app.engine import housekeeping as hk
 from app.engine.netclient import build_clients
 from app.engine.partitions import ensure_partitions
@@ -92,6 +93,9 @@ async def run() -> None:
                 stop,
             ),
             _periodic("outbox", 5, lambda: drain_outbox(maker, settings), stop),
+            _periodic("heartbeat-ping", 60, lambda: deadman.ping(settings, scheduler), stop)
+            if settings.heartbeat_url
+            else asyncio.sleep(0),
             _periodic("eventlog", 10, lambda: eventlog.flush_events(maker), stop),
             _periodic(
                 "rollup",
